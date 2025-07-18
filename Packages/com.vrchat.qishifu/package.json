@@ -1,9 +1,9 @@
 {
   "name": "com.vrchat.qishifu",
-  "displayName": "奇师傅工具箱",
+  "displayName": "qishifu tool",
   "version": "0.0.1",
   "unity": "2022.3",
-  "description": "奇师傅工具箱",
+  "description": "qishifu tool",
   "vrchatVersion": "2022.1.1",
   "author": {
     "name": "liuris",
