@@ -1,0 +1,12 @@
+{
+  "name": "com.vrchat.liuris",
+  "displayName": "VRChat Tools",
+  "version": "0.0.1",
+  "unity": "2022.3",
+  "description": "VRChat Tools",
+  "vrchatVersion": "2022.1.1",
+  "author": {
+    "name": "liuris",
+    "email": "1159419473@qq.com"
+  }
+}
