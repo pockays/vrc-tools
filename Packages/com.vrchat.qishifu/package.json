@@ -1,0 +1,12 @@
+{
+  "name": "com.vrchat.qishifu",
+  "displayName": "奇师傅工具箱",
+  "version": "0.0.1",
+  "unity": "2022.3",
+  "description": "奇师傅工具箱",
+  "vrchatVersion": "2022.1.1",
+  "author": {
+    "name": "liuris",
+    "email": "1159419473@qq.com"
+  }
+}
