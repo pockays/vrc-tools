@@ -43,7 +43,7 @@ jobs:
       - name: Checkout Automation Repository
         uses: actions/checkout@v4
         with:
-          repository: vrchat-community/package-list-action
+          repository: pockays/vrc-tools
           path: ${{ env.pathToCi }}
           clean: false
 
