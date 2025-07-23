@@ -5,16 +5,13 @@ env:
   pathToCi: ci
   
 on: 
-  workflow_dispatch:  # 手动触发
-  push:
-    branches: main
-    paths: source.json  # 当 source.json 变更时触发
+  workflow_dispatch:
   workflow_run:
     workflows: [Build Release]
     types:
-      - completed  # 当 Build Release 工作流完成时触发
+      - completed
   release:
-    types: [published, created, edited, unpublished, deleted, released]  # 发布相关事件触发
+    types: [published, created, edited, unpublished, deleted, released]
 
 permissions:
   contents: read
@@ -34,14 +31,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Local Repository
-        uses: actions/checkout@v4  # 检出当前仓库
+        uses: actions/checkout@v4
 
       - name: Checkout Automation Repository
-        uses: actions/checkout@v4  # 检出自动化工具仓库
+        uses: actions/checkout@v4
         with:
           repository: vrchat-community/package-list-action
           path: ${{ env.pathToCi }}
-          clean: false  # 保留本地仓库文件
+          clean: false
 
       - name: Restore Cache
         uses: actions/cache@v4
@@ -51,27 +48,9 @@ jobs:
             ~/.nuget/packages
           key: ${{ runner.os }}-${{ hashFiles('**/global.json', '**/*.csproj') }}
       
-      - name: Build Multi-Package Listing (from source.json)
-        run: |
-          ${{ env.pathToCi }}/build.cmd BuildMultiPackageListing \
-            --root ${{ env.pathToCi }} \
-            --list-publish-directory $GITHUB_WORKSPACE/${{ env.listPublishDirectory }}
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Build Package Version Listing for All Packages
-        run: |
-          IFS=',' read -ra packages <<< "${{ vars.PACKAGE_NAME }}"
-          
-          mkdir -p $GITHUB_WORKSPACE/${{ env.listPublishDirectory }}
-          
-          for package in "${packages[@]}"; do
-            echo "Generating listing for package: $package"
-            ${{ env.pathToCi }}/build.cmd BuildRepoListing \
-              --root ${{ env.pathToCi }} \
-              --list-publish-directory $GITHUB_WORKSPACE/${{ env.listPublishDirectory }} \
-              --current-package-name "$package"
-          done
+      # 为每个包生成清单并合并到网站目录
+      - name: Build Package Version Listing
+        run: ${{env.pathToCi}}/build.cmd BuildMultiPackageListing --root ${{env.pathToCi}} --list-publish-directory $GITHUB_WORKSPACE/${{env.listPublishDirectory}}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
