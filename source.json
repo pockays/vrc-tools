@@ -1,21 +1,20 @@
 {
-    "name":"liuris Listing",
-    "id":"com.vrchat.liurs-listing",
-    "url":"https://pockays.github.io/vrc-tools/index.json",
+    "name":"Example Listing",
+    "id":"com.vrchat.example-listing",
+    "url":"https://vrchat-community.github.io/template-package-listing/index.json",
     "author":{
         "email":"developer@vrchat.com",
         "name":"VRChat",
         "url":"https://hello.vrchat.com"
     },
-    "description":"liuris listing of VRChat packages",
+    "description":"Example listing of VRChat packages",
     "infoLink":{
-        "url":"http://github.com/pockays/vrc-tools",
+        "url":"http://github.com/vrchat-community/template-package-listing",
         "text":"View on GitHub"
     },
     "bannerUrl":"banner.png",
     "githubRepos":[
-        "vrchat-community/clientsim",
-        "pockays/vrc-tools"
+        "vrchat-community/clientsim"
     ],
     "packages":[
         {
@@ -24,12 +23,6 @@
                 "https://github.com/vrchat-community/UdonSharp/releases/download/1.1.7/com.vrchat.UdonSharp.zip",
                 "https://github.com/vrchat-community/UdonSharp/releases/download/1.1.6/com.vrchat.UdonSharp-1.1.6.zip"
             ]
-        }
-        {
-            "name":"com.vrchat.liuris",
-            "releases":[
-                "https://github.com/pockays/vrc-tools/releases/download/0.0.7/com.vrchat.liuris-0.0.7.zip"
-            ]  
         }
     ]
 }
