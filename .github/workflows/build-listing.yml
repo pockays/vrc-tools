@@ -5,13 +5,16 @@ env:
   pathToCi: ci
   
 on: 
-  workflow_dispatch:
+  workflow_dispatch:  # 手动触发
+  push:
+    branches: main
+    paths: source.json  # 当 source.json 变更时触发
   workflow_run:
     workflows: [Build Release]
     types:
-      - completed
+      - completed  # 当 Build Release 工作流完成时触发
   release:
-    types: [published, created, edited, unpublished, deleted, released]
+    types: [published, created, edited, unpublished, deleted, released]  # 发布相关事件触发
 
 permissions:
   contents: read
@@ -31,14 +34,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Local Repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v4  # 检出当前仓库
 
       - name: Checkout Automation Repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v4  # 检出自动化工具仓库
         with:
           repository: vrchat-community/package-list-action
           path: ${{ env.pathToCi }}
-          clean: false
+          clean: false  # 保留本地仓库文件
 
       - name: Restore Cache
         uses: actions/cache@v4
@@ -48,22 +51,26 @@ jobs:
             ~/.nuget/packages
           key: ${{ runner.os }}-${{ hashFiles('**/global.json', '**/*.csproj') }}
       
-      # 为每个包生成清单并合并到网站目录
+      - name: Build Multi-Package Listing (from source.json)
+        run: |
+          ${{ env.pathToCi }}/build.cmd BuildMultiPackageListing \
+            --root ${{ env.pathToCi }} \
+            --list-publish-directory $GITHUB_WORKSPACE/${{ env.listPublishDirectory }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Build Package Version Listing for All Packages
         run: |
-          # 将逗号分隔的包名分割为数组
           IFS=',' read -ra packages <<< "${{ vars.PACKAGE_NAME }}"
           
-          # 确保发布目录存在
           mkdir -p $GITHUB_WORKSPACE/${{ env.listPublishDirectory }}
           
-          # 遍历每个包，生成单独的清单
           for package in "${packages[@]}"; do
             echo "Generating listing for package: $package"
             ${{ env.pathToCi }}/build.cmd BuildRepoListing \
               --root ${{ env.pathToCi }} \
               --list-publish-directory $GITHUB_WORKSPACE/${{ env.listPublishDirectory }} \
-              --current-package-name "$package"  # 传入当前包名
+              --current-package-name "$package"
           done
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
