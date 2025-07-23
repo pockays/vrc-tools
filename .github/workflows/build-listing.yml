@@ -57,8 +57,22 @@ jobs:
           key: ${{ runner.os }}-${{ hashFiles('**/global.json', '**/*.csproj') }}
       
       # 为每个包生成清单并合并到网站目录
-      - name: Build Package Version Listing
-        run: ${{env.pathToCi}}/build.cmd BuildMultiPackageListing --root ${{env.pathToCi}} --list-publish-directory $GITHUB_WORKSPACE/${{env.listPublishDirectory}}
+      - name: Build Package Version Listing for All Packages
+        run: |
+          # 将逗号分隔的包名分割为数组
+          IFS=',' read -ra packages <<< "${{ vars.PACKAGE_NAME }}"
+          
+          # 确保发布目录存在
+          mkdir -p $GITHUB_WORKSPACE/${{ env.listPublishDirectory }}
+          
+          # 遍历每个包，生成单独的清单
+          for package in "${packages[@]}"; do
+            echo "Generating listing for package: $package"
+            ${{ env.pathToCi }}/build.cmd BuildRepoListing \
+              --root ${{ env.pathToCi }} \
+              --list-publish-directory $GITHUB_WORKSPACE/${{ env.listPublishDirectory }} \
+              --current-package-name "$package"  # 传入当前包名
+          done
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         
