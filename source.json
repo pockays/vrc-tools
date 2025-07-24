@@ -14,7 +14,14 @@
     },
     "bannerUrl":"banner.png",
     "githubRepos":[
-        "pockays/vrc-tools",
-        "VRCFury/VRCFury"
+        "pockays/vrc-tools"
     ],
+    "packages":[
+        {
+            "name":"com.vrcfury.vrcfury",
+            "releases":[
+                "https://github.com/VRCFury/VRCFury/releases/download/com.vrcfury.vrcfury%2F1.1241.0/com.vrcfury.vrcfury-1.1241.0-vcc.zip"
+            ]
+        }
+    ]
 }
