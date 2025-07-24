@@ -14,7 +14,7 @@
     },
     "bannerUrl":"banner.png",
     "githubRepos":[
-        "pockays/vrc-tools"
+        "pockays/vrc-tools",
         "VRCFury/VRCFury"
     ],
 }
