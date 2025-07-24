@@ -15,6 +15,6 @@
     "bannerUrl":"banner.png",
     "githubRepos":[
         "pockays/vrc-tools",
-        "VRCFury/vrcfury-updater-manifest"
+        "VRCFury/vrcfury-installer"
     ]
 }
