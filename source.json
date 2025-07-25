@@ -16,12 +16,12 @@
     "githubRepos":[
         "pockays/vrc-tools",
         "VRCFury/VRCFury",
-    ]
-     "packages":[
+    ],
+    "packages":[
         {
             "name":"com.vrchat.liuris",
             "releases":[
-                "https://github.com/HhotateA/AvatarModifyTools/releases/download/dev1.30.18/FullPackage_v1.30.18.unitypackage",
+                "https://github.com/HhotateA/AvatarModifyTools/releases/download/dev1.30.18/FullPackage_v1.30.18.unitypackage"
             ]
             
         }
