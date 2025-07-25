@@ -15,7 +15,6 @@
     "bannerUrl":"banner.png",
     "githubRepos":[
         "pockays/vrc-tools",
-        "VRCFury/VRCFury",
-        "HhotateA/AvatarModifyTools"
+        "VRCFury/VRCFury"
     ]
 }
