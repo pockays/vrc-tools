@@ -16,6 +16,14 @@
     "githubRepos":[
         "pockays/vrc-tools",
         "VRCFury/VRCFury",
-        "HhotateA/AvatarModifyTools"
+    ]
+     "packages":[
+        {
+            "name":"com.vrchat.udonsharp",
+            "releases":[
+                "https://github.com/HhotateA/AvatarModifyTools/releases/download/dev1.30.18/FullPackage_v1.30.18.unitypackage",
+            ]
+            
+        }
     ]
 }
