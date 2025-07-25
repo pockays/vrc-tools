@@ -1,0 +1,12 @@
+{
+  "name": "com.vrchat.liuris",
+  "displayName": "liuris的工具插件",
+  "version": "0.0.7",
+  "unity": "2022.3",
+  "description": "liuris的工具插件",
+  "vrchatVersion": "2022.1.1",
+  "author": {
+    "name": "liuris",
+    "email": "1159419473@qq.com"
+  }
+}
