@@ -17,14 +17,5 @@
         "pockays/vrc-tools",
         "VRCFury/VRCFury",
         "HhotateA/AvatarModifyTools"
-    ],
-    "packages":[
-        {
-            "name":"com.vrchat.core.vpm-resolver",
-            "releases":[
-                "https://github.com/HhotateA/AvatarModifyTools/releases/download/dev1.30.18/FullPackage_v1.30.18.unitypackage"
-            ]
-            
-        }
     ]
 }
