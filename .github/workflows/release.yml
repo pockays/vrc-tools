@@ -75,19 +75,32 @@ jobs:
           package-path: ${{ env.unityPackage }}
           include-files: ${{ env.metaList }}  # 使用当前包的 meta 列表
       
-      # 检查标签是否存在
-      - name: Check Tag Existence
-        id: check_tag
-        if: matrix.package == fromJSON(needs.config.outputs.packages)[0]
+      - name: Get Existing Tags
+        id: get_tags
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          if git rev-parse ${{ env.version }} >/dev/null 2>&1; then
+          # 获取所有标签并解析为数组
+          tags=$(curl -s -H "Authorization: token $GITHUB_TOKEN" \
+            "https://api.github.com/repos/$GITHUB_REPOSITORY/tags" | \
+            jq -r '.[].name')
+          
+          echo "existing_tags=$tags" >> $GITHUB_OUTPUT
+          echo "现有标签: $tags"
+
+      - name: Check Tag Exists
+        id: check_tag
+        env:
+          TARGET_TAG: ${{ steps.version.outputs.value }}
+        run: |
+          if echo "${{ steps.get_tags.outputs.existing_tags }}" | grep -q "$TARGET_TAG"; then
             echo "tag_exists=true" >> $GITHUB_OUTPUT
-            echo "Tag ${{ env.version }} already exists."
+            echo "标签 $TARGET_TAG 已存在"
           else
             echo "tag_exists=false" >> $GITHUB_OUTPUT
-            echo "Tag ${{ env.version }} does not exist."
+            echo "标签 $TARGET_TAG 不存在"
           fi
-      
+            
       # 仅在标签不存在时创建标签
       - name: Create Tag (Only if Tag Doesn't Exist)
         if: matrix.package == fromJSON(needs.config.outputs.packages)[0] && steps.check_tag.outputs.tag_exists == 'false'
