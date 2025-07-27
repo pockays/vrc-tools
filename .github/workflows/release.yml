@@ -80,7 +80,7 @@ jobs:
         id: check_tag
         if: matrix.package == fromJSON(needs.config.outputs.packages)[0]
         run: |
-          if git rev-parse ${{ env.version }} >/2>&1; then
+          if git rev-parse ${{ env.version }} >/dev/null 2>&1; then
             echo "tag_exists=true" >> $GITHUB_OUTPUT
             echo "Tag ${{ env.version }} already exists."
           else
