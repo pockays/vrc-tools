@@ -75,9 +75,22 @@ jobs:
           package-path: ${{ env.unityPackage }}
           include-files: ${{ env.metaList }}  # 使用当前包的 meta 列表
       
-      # 仅为第一个包创建标签（避免重复标签）
-      - name: Create Tag (Only for First Package)
+      # 检查标签是否存在
+      - name: Check Tag Existence
+        id: check_tag
         if: matrix.package == fromJSON(needs.config.outputs.packages)[0]
+        run: |
+          if git rev-parse ${{ env.version }} >/2>&1; then
+            echo "tag_exists=true" >> $GITHUB_OUTPUT
+            echo "Tag ${{ env.version }} already exists."
+          else
+            echo "tag_exists=false" >> $GITHUB_OUTPUT
+            echo "Tag ${{ env.version }} does not exist."
+          fi
+      
+      # 仅在标签不存在时创建标签
+      - name: Create Tag (Only if Tag Doesn't Exist)
+        if: matrix.package == fromJSON(needs.config.outputs.packages)[0] && steps.check_tag.outputs.tag_exists == 'false'
         id: tag_version
         uses: rickstaa/action-create-tag@88dbf7ff6fe2405f8e8f6c6fdfd78829bc631f83
         with:
