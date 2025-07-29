@@ -17,6 +17,7 @@
         "pockays/vrc-tools",
         "VRCFury/VRCFury",
         "rurre/PumkinsAvatarTools",
-        "Tliks/ModuleCreator"
+        "Tliks/ModuleCreator",
+        "Thryrallo/VRC-Avatar-Performance-Tools"
     ]
 }
