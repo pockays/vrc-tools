@@ -15,6 +15,21 @@
     "bannerUrl":"banner.png",
     "githubRepos":[
         "pockays/vrc-tools",
-        "VRCFury/VRCFury"
+        "VRCFury/VRCFury",
+        "rurre/PumkinsAvatarTools",
+        "Tliks/ModuleCreator",
+        "Thryrallo/VRC-Avatar-Performance-Tools",
+        "anatawa12/AvatarOptimizer",
+        "suzuryg/face-emo",
+        "BlackStartx/VRC-Gesture-Manager",
+        "whiteflare/AvatarTools",
+        "VRLabs/Avatars-3.0-Manager",
+        "enitimeago/make-it-mmd",
+        "bdunderscore/modular-avatar",
+        "lilxyzw/lilEditorToolbox",
+        "lilxyzw/lilToon",
+        "poiyomi/PoiyomiToonShader",
+        "esperecyan/VRMConverterForVRChat",
+        "Narazaka/FloorAdjuster"
     ]
 }
