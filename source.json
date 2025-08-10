@@ -33,5 +33,13 @@
         "Narazaka/FloorAdjuster",
         "nuomew/nuomewtoolbox-Parameter",
         "nekoare/texture-color-adjuster"
+    ],
+    "packages":[
+        {
+            "name":"com.vrchat.texture-color-adjuster",
+            "releases":[
+                "https://nekoare.github.io/texture-color-adjuster/dev.nekoare.tex-col-adjuster-v1.0.2.zip",
+            ]
+        }
     ]
 }
