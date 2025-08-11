@@ -1,0 +1,12 @@
+{
+  "name": "com.vrchat.Kimera Maker",
+  "displayName": "接头霸王",
+  "version": "0.0.1",
+  "unity": "2022.3",
+  "description": "接头霸王",
+  "vrchatVersion": "2022.1.1",
+  "author": {
+    "name": "liuris",
+    "email": "1159419473@qq.com"
+  }
+}

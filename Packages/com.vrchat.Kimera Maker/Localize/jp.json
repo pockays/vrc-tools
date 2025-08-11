@@ -1,0 +1,30 @@
+﻿{
+    "Head_Avatar" : "頭用のアバター",
+    "Unpack_Prefab" : "プレハブを解凍",
+    "CantFindGestureLayer" : "表情レイヤーが見つかりませんでした。\nキメラを作った際に表情が上書きされません。",
+    "DontLipsync" : "リップシンクが設定されていません。\nキメラを作った際にリップシンクが動作しません。",
+    "DontEyelook" : "Eye Lookが設定されていません。\nキメラを作った際に目線が動きません。",
+    "DontEyelids" : "まばたきが設定されていません。\nキメラを作った際にまばたきが動作しません。",
+    "NotHere" : "無し",
+    "Body_Avatar" : "体用のアバター",
+    "Kimera_Name" : "キメラを作る時の名前",
+    "Kimera_Create" : "キメラを作る",
+    "IsNeedBackup" : "バックアップを取りますか？",
+    "Yes" : "はい",
+    "No" : "いいえ",
+    "Complete" : "処理が完了しました。\nView Positionの調整が行われていないので、View Positionの調整をお願いします。",
+    "AnimatorError" : "このアバターにAnimatorが無いため、処理を正常に完了できませんでした。\n正常なVRchat向けアバターを入れてください。",
+    "HumanoidError" : "このアバターはHumanoidアバターでないため、正常に処理を完了出来ませんでした。\nHumanoidアバターを入れてください。",
+    "FoundSomeName" : "頭用アバターと体用アバターで同一の名前であるオブジェクトが見つかりました。\nバグの原因になるため、名前を変更することを推奨します。",
+    "AllChangeName" : "全て名前を変更する",
+    "SomeNameObject" :  "同一名のオブジェクト",
+    "Deleting" : "削除する",
+    
+    "Cancel" : "キャンセル",
+    "AvatarInfo" : "アバター情報",
+
+    "BodyHeadSome" : "頭用アバターと体用アバターが同一オブジェクトです。\n違うオブジェクトを入れてください。",
+    "For_advanced_users" : "上級者 向け",
+    "Inherited_layers" : "継承するレイヤー",
+    "EyeBoneParent" : "目のボーンを追従させる"
+}
