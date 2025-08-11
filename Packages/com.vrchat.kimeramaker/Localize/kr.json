@@ -1,0 +1,30 @@
+﻿{
+    "Head_Avatar" : "머리용 아바타",
+    "Unpack_Prefab" : "Prefab을 해제",
+    "CantFindGestureLayer" : "표정 레이어를 찾을 수 없었습니다.\n키메라를 만들었을 때 표정 레이어가 덮여지지 않습니다.",
+    "DontLipsync" : "립싱크가 설정되어 있지 않습니다.\n키메라를 만들 때 립싱크가 작동하지 않습니다.",
+    "DontEyelook" : "Eye Look이 설정되어 있지 않습니다.\n키메라를 만들 때 시선이 움직이지 않습니다.",
+    "DontEyelids" : "눈 깜박임이 설정되어 있지 않습니다.\n키메라를 만들 때 눈 깜박임이 작동하지 않습니다.",
+    "NotHere" : "없음",
+    "Body_Avatar" : "신체용 아바타",
+    "Kimera_Name" : "키메라를 만들 때의 이름",
+    "Kimera_Create" : "키메라를 만들기",
+    "IsNeedBackup" : "백업을 하겠습니까?",
+    "Yes" : "예",
+    "No" : "아니오",
+    "Complete" : "처리 완료되었습니다.\nView Position의 조정이 이루어지지 않아서 View Position 조정 부탁드립니다.",
+    "AnimatorError" : "이 아바타에 Animator가 없기 때문에 처리를 정상적으로 완료하지 못했습니다.\n 정상적인 VRchat용 아바타를 넣어주세요.",
+    "HumanoidError" : "이 아바타는 Humanoid 아바타가 아니기 때문에 정상적으로 처리를 완료하지 못했습니다.\nHumanoid 아바타를 넣어주세요.",
+    "FoundSomeName" : "머리용 아바타와 몸용 아바타에서 동일한 이름의 오브젝트가 발견되었습니다.\n 버그의 원인이 되므로 이름 변경을 권장합니다.",
+    "AllChangeName" : "전부 이름을 변경하기",
+    "SomeNameObject" :  "동일한 이름의 오브젝트",
+    "Deleting" : "삭제하기",
+
+    "Cancel" : "취소",
+    "AvatarInfo" : "아바타 정보",
+
+    "BodyHeadSome" : "머리용 아바타와 몸용 아바타가 동일 객체입니다.\n다른 오브젝트를 넣어주세요.",
+    "For_advanced_users" : "상급자용",
+    "Inherited_layers" : "계승하는 레이어",
+    "EyeBoneParent" : "눈의 본을 따르게 하다"
+}

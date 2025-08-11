@@ -1,0 +1,30 @@
+﻿{
+    "Head_Avatar" : "Avatar for the head",
+    "Unpack_Prefab" : "Unpack Prefab",
+    "CantFindGestureLayer" : "Gesture layer not found. \nGesture Layer is not overwritten when creating a chimera.",
+    "DontLipsync" : "Lip-sync is not set up. \nLip-sync does not work when creating a chimera.",
+    "DontEyelook" : "Eye Look is not set. \nThe eye look does not move when the chimera is created.",
+    "DontEyelids" : "Blink is not set. \nBlink does not work when creating a chimera.",
+    "NotHere" : "Does not exist.",
+    "Body_Avatar" : "Avatar for the body",
+    "Kimera_Name" : "Chimera Name",
+    "Kimera_Create" : "Create a chimera",
+    "IsNeedBackup" : "Do you make backups?",
+    "Yes" : "Yes",
+    "No" : "No",
+    "Complete" : "The process is complete.\nThe View Position has not been adjusted, please adjust the View Position.",
+    "AnimatorError" : "The process could not be completed successfully because this avatar does not have an Animator. \nPlease insert a normal avatar for VRchat.",
+    "HumanoidError" : "The process could not be completed successfully because this avatar is not a Humanoid avatar\nPlease insert a Humanoid avatar.",
+    "FoundSomeName" : "Found an object with the same name in the avatar for the head and the avatar for the body. \nIt is recommended to change the name as it causes a bug.",
+    "AllChangeName" : "Rename all",
+    "SomeNameObject" :  "Object with the same name",
+    "Deleting" : "Delete",
+    "Cancel" : "Cancel",
+    "AvatarInfo" : "Avatar Infomation",
+
+    "BodyHeadSome" : "Please make sure that the head and the body that are put into this tool are different objects.",
+    "For_advanced_users" : "For advanced users",
+    "Inherited_layers" : "Inherited layers",
+    "EyeBoneParent" : "Follow the eye bone"
+    
+}
