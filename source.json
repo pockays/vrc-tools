@@ -31,7 +31,8 @@
         "poiyomi/PoiyomiToonShader",
         "esperecyan/VRMConverterForVRChat",
         "Narazaka/FloorAdjuster",
-        "nuomew/nuomewtoolbox-Parameter"
+        "nuomew/nuomewtoolbox-Parameter",
+        "lilxyzw/lilAvatarUtils"
     ],
     "packages":[
         {
