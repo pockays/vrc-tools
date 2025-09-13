@@ -1,9 +1,9 @@
 {
   "name": "com.vrchat.liuris",
-  "displayName": "liuris的工具插件",
+  "displayName": "咩卡布的工具插件",
   "version": "0.0.1",
   "unity": "2022.3",
-  "description": "liuris的工具插件",
+  "description": "咩卡布的工具插件",
   "vrchatVersion": "2022.1.1",
   "author": {
     "name": "liuris",
