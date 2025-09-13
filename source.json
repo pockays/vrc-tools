@@ -1,5 +1,5 @@
 {
-    "name":"liuris Listing",
+    "name":"咩卡布",
     "id":"com.vrchat.liurs-listing",
     "url":"https://pockays.github.io/vrc-tools/index.json",
     "author":{
@@ -7,7 +7,7 @@
         "name":"VRChat",
         "url":"https://hello.vrchat.com"
     },
-    "description":"liuris listing of VRChat packages",
+    "description":"咩卡布的仓库",
     "infoLink":{
         "url":"http://github.com/pockays/vrc-tools",
         "text":"View on GitHub"
