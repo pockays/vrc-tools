@@ -32,7 +32,8 @@
         "esperecyan/VRMConverterForVRChat",
         "Narazaka/FloorAdjuster",
         "nuomew/nuomewtoolbox-Parameter",
-        "lilxyzw/lilAvatarUtils"
+        "lilxyzw/lilAvatarUtils",
+        "bdunderscore/ndmf"
     ],
     "packages":[
         {
