@@ -21,17 +21,29 @@ public class AnimatorControllerBatchEditor : EditorWindow
     // 条件操作模式
     private enum ConditionOperationMode
     {
-        Replace,    // 替换所有条件
-        Add,        // 添加新条件
-        Remove      // 移除匹配条件
+        ReplaceAll,        // 替换所有条件
+        ReplaceSpecific,   // 替换指定条件
+        Add,               // 添加新条件
+        Remove             // 移除匹配条件
     }
-    private ConditionOperationMode conditionMode = ConditionOperationMode.Replace;
+    private ConditionOperationMode conditionMode = ConditionOperationMode.ReplaceAll;
     
     // 批量条件管理
     private List<AnimatorCondition> batchConditions = new List<AnimatorCondition>();
     private string newConditionParameter = "";
     private AnimatorConditionMode newConditionMode = AnimatorConditionMode.Equals;
     private float newConditionThreshold;
+    
+    // 替换条件相关
+    private List<ConditionReplacement> conditionReplacements = new List<ConditionReplacement>();
+    
+    // 替换条件输入字段
+    private string replaceOriginalParameter = "";
+    private AnimatorConditionMode replaceOriginalMode = AnimatorConditionMode.Equals;
+    private float replaceOriginalThreshold = 0f;
+    private string replaceNewParameter = "";
+    private AnimatorConditionMode replaceNewMode = AnimatorConditionMode.Equals;
+    private float replaceNewThreshold = 0f;
     
     // AnyState 生成参数
     private int anyStateCount = 2;
@@ -63,6 +75,19 @@ public class AnimatorControllerBatchEditor : EditorWindow
             this.sourceStateName = sourceStateName;
             this.destinationStateName = destinationStateName;
             this.isAnyStateTransition = isAnyStateTransition;
+        }
+    }
+
+    [System.Serializable]
+    private class ConditionReplacement
+    {
+        public AnimatorCondition originalCondition;
+        public AnimatorCondition newCondition;
+        
+        public ConditionReplacement(AnimatorCondition original, AnimatorCondition newCondition)
+        {
+            this.originalCondition = original;
+            this.newCondition = newCondition;
         }
     }
 
@@ -143,6 +168,10 @@ public class AnimatorControllerBatchEditor : EditorWindow
         }
         
         EditorGUILayout.BeginHorizontal();
+        if (GUILayout.Button("刷新选中层"))
+        {
+            RefreshSelectedLayer();
+        }
         if (GUILayout.Button("选择此层中的过渡"))
         {
             RefreshSelectedLayer();
@@ -620,19 +649,19 @@ public class AnimatorControllerBatchEditor : EditorWindow
         {
             var state = childState.state;
             foreach (var transition in state.transitions)
-            {
-                if (transition != null && transition.destinationState != null)
                 {
-                    selectedTransitions.Add(new TransitionInfo(
-                        transition, 
-                        layerName, 
-                        currentPath + "." + state.name,
-                        transition.destinationState.name,
-                        false
-                    ));
+                    if (transition != null && transition.destinationState != null)
+                    {
+                        selectedTransitions.Add(new TransitionInfo(
+                            transition, 
+                            layerName, 
+                            currentPath + "." + state.name,
+                            transition.destinationState.name,
+                            false
+                        ));
+                    }
                 }
             }
-        }
         
         // 收集 AnyState 的过渡
         foreach (var transition in stateMachine.anyStateTransitions)
@@ -958,16 +987,148 @@ public class AnimatorControllerBatchEditor : EditorWindow
     {
         switch (conditionMode)
         {
-            case ConditionOperationMode.Replace: return "替换所有现有条件";
-            case ConditionOperationMode.Add: return "在现有条件基础上添加新条件";
-            case ConditionOperationMode.Remove: return "移除与指定条件匹配的条件";
+            case ConditionOperationMode.ReplaceAll: 
+                return "替换所有现有条件为新的条件列表";
+            case ConditionOperationMode.ReplaceSpecific: 
+                return "将指定的条件替换为新的条件";
+            case ConditionOperationMode.Add: 
+                return "在现有条件基础上添加新条件";
+            case ConditionOperationMode.Remove: 
+                return "移除与指定条件匹配的条件";
             default: return "";
         }
     }
 
     private void DrawConditionsManagement()
     {
+        // 根据模式显示不同的界面
+        switch (conditionMode)
+        {
+            case ConditionOperationMode.ReplaceAll:
+                DrawReplaceAllConditionsUI();
+                break;
+            case ConditionOperationMode.ReplaceSpecific:
+                DrawReplaceSpecificConditionsUI();
+                break;
+            case ConditionOperationMode.Add:
+                DrawAddConditionsUI();
+                break;
+            case ConditionOperationMode.Remove:
+                DrawRemoveConditionsUI();
+                break;
+        }
+    }
+
+    private void DrawReplaceAllConditionsUI()
+    {
         // 添加新条件
+        EditorGUILayout.BeginVertical("box");
+        EditorGUILayout.LabelField("新条件列表 (将替换所有现有条件)", EditorStyles.miniBoldLabel);
+        
+        newConditionParameter = EditorGUILayout.TextField("参数名称", newConditionParameter);
+        newConditionMode = (AnimatorConditionMode)EditorGUILayout.EnumPopup("条件模式", newConditionMode);
+        newConditionThreshold = EditorGUILayout.FloatField("阈值", newConditionThreshold);
+        
+        if (GUILayout.Button("添加到替换列表") && !string.IsNullOrEmpty(newConditionParameter))
+        {
+            var newCondition = new AnimatorCondition
+            {
+                parameter = newConditionParameter,
+                mode = newConditionMode,
+                threshold = newConditionThreshold
+            };
+            batchConditions.Add(newCondition);
+            EnsureParameterExists(newConditionParameter);
+            
+            // 清空输入字段
+            newConditionParameter = "";
+            newConditionThreshold = 0;
+        }
+        EditorGUILayout.EndVertical();
+
+        DrawCurrentConditionsList("替换条件列表", batchConditions, true);
+    }
+
+    private void DrawReplaceSpecificConditionsUI()
+    {
+        EditorGUILayout.BeginVertical("box");
+        EditorGUILayout.LabelField("条件替换设置", EditorStyles.miniBoldLabel);
+        EditorGUILayout.HelpBox("将指定的原条件替换为新条件", MessageType.Info);
+        
+        // 原条件
+        EditorGUILayout.LabelField("原条件", EditorStyles.miniBoldLabel);
+        replaceOriginalParameter = EditorGUILayout.TextField("参数名称", replaceOriginalParameter);
+        replaceOriginalMode = (AnimatorConditionMode)EditorGUILayout.EnumPopup("条件模式", replaceOriginalMode);
+        replaceOriginalThreshold = EditorGUILayout.FloatField("阈值", replaceOriginalThreshold);
+        
+        // 新条件
+        EditorGUILayout.LabelField("新条件", EditorStyles.miniBoldLabel);
+        replaceNewParameter = EditorGUILayout.TextField("参数名称", replaceNewParameter);
+        replaceNewMode = (AnimatorConditionMode)EditorGUILayout.EnumPopup("条件模式", replaceNewMode);
+        replaceNewThreshold = EditorGUILayout.FloatField("阈值", replaceNewThreshold);
+        
+        if (GUILayout.Button("添加替换规则") && !string.IsNullOrEmpty(replaceOriginalParameter) && !string.IsNullOrEmpty(replaceNewParameter))
+        {
+            var originalCondition = new AnimatorCondition
+            {
+                parameter = replaceOriginalParameter,
+                mode = replaceOriginalMode,
+                threshold = replaceOriginalThreshold
+            };
+            
+            var newCondition = new AnimatorCondition
+            {
+                parameter = replaceNewParameter,
+                mode = replaceNewMode,
+                threshold = replaceNewThreshold
+            };
+            
+            conditionReplacements.Add(new ConditionReplacement(originalCondition, newCondition));
+            EnsureParameterExists(replaceNewParameter);
+            
+            // 清空输入字段
+            replaceOriginalParameter = "";
+            replaceOriginalThreshold = 0f;
+            replaceNewParameter = "";
+            replaceNewThreshold = 0f;
+        }
+        EditorGUILayout.EndVertical();
+
+        // 显示替换规则列表
+        if (conditionReplacements.Count > 0)
+        {
+            EditorGUILayout.Space();
+            EditorGUILayout.LabelField($"替换规则列表 ({conditionReplacements.Count} 个):", EditorStyles.miniBoldLabel);
+            
+            for (int i = 0; i < conditionReplacements.Count; i++)
+            {
+                EditorGUILayout.BeginHorizontal();
+                var replacement = conditionReplacements[i];
+                var original = replacement.originalCondition;
+                var newCond = replacement.newCondition;
+                
+                EditorGUILayout.LabelField($"{original.parameter} {original.mode} {original.threshold}", GUILayout.Width(150));
+                EditorGUILayout.LabelField("→", GUILayout.Width(20));
+                EditorGUILayout.LabelField($"{newCond.parameter} {newCond.mode} {newCond.threshold}", GUILayout.Width(150));
+                
+                if (GUILayout.Button("×", GUILayout.Width(25)))
+                {
+                    conditionReplacements.RemoveAt(i);
+                    break;
+                }
+                EditorGUILayout.EndHorizontal();
+            }
+            
+            if (GUILayout.Button("清空所有替换规则"))
+            {
+                conditionReplacements.Clear();
+            }
+        }
+    }
+
+    private void DrawAddConditionsUI()
+    {
+        // 添加新条件（原有逻辑）
         EditorGUILayout.BeginVertical("box");
         EditorGUILayout.LabelField("添加新条件", EditorStyles.miniBoldLabel);
         
@@ -988,42 +1149,72 @@ public class AnimatorControllerBatchEditor : EditorWindow
         }
         EditorGUILayout.EndVertical();
 
-        if (batchConditions.Count > 0)
+        DrawCurrentConditionsList("要添加的条件列表", batchConditions, true);
+    }
+
+    private void DrawRemoveConditionsUI()
+    {
+        // 移除条件（原有逻辑）
+        EditorGUILayout.BeginVertical("box");
+        EditorGUILayout.LabelField("要移除的条件", EditorStyles.miniBoldLabel);
+        
+        newConditionParameter = EditorGUILayout.TextField("参数名称", newConditionParameter);
+        newConditionMode = (AnimatorConditionMode)EditorGUILayout.EnumPopup("条件模式", newConditionMode);
+        newConditionThreshold = EditorGUILayout.FloatField("阈值", newConditionThreshold);
+        
+        if (GUILayout.Button("添加到移除列表") && !string.IsNullOrEmpty(newConditionParameter))
+        {
+            var newCondition = new AnimatorCondition
+            {
+                parameter = newConditionParameter,
+                mode = newConditionMode,
+                threshold = newConditionThreshold
+            };
+            batchConditions.Add(newCondition);
+        }
+        EditorGUILayout.EndVertical();
+
+        DrawCurrentConditionsList("要移除的条件列表", batchConditions, true);
+    }
+
+    private void DrawCurrentConditionsList(string title, List<AnimatorCondition> conditions, bool showClearButton)
+    {
+        if (conditions.Count > 0)
         {
             EditorGUILayout.Space();
-            EditorGUILayout.LabelField($"当前条件列表 ({batchConditions.Count} 个):", EditorStyles.miniBoldLabel);
+            EditorGUILayout.LabelField($"{title} ({conditions.Count} 个):", EditorStyles.miniBoldLabel);
             
-            for (int i = 0; i < batchConditions.Count; i++)
+            for (int i = 0; i < conditions.Count; i++)
             {
                 EditorGUILayout.BeginHorizontal();
-                var condition = batchConditions[i];
+                var condition = conditions[i];
                 EditorGUILayout.LabelField($"{condition.parameter} {condition.mode} {condition.threshold}", GUILayout.Width(200));
                 
                 if (GUILayout.Button("↑", GUILayout.Width(25)) && i > 0)
                 {
-                    var temp = batchConditions[i - 1];
-                    batchConditions[i - 1] = batchConditions[i];
-                    batchConditions[i] = temp;
+                    var temp = conditions[i - 1];
+                    conditions[i - 1] = conditions[i];
+                    conditions[i] = temp;
                 }
                 
-                if (GUILayout.Button("↓", GUILayout.Width(25)) && i < batchConditions.Count - 1)
+                if (GUILayout.Button("↓", GUILayout.Width(25)) && i < conditions.Count - 1)
                 {
-                    var temp = batchConditions[i + 1];
-                    batchConditions[i + 1] = batchConditions[i];
-                    batchConditions[i] = temp;
+                    var temp = conditions[i + 1];
+                    conditions[i + 1] = conditions[i];
+                    conditions[i] = temp;
                 }
                 
                 if (GUILayout.Button("×", GUILayout.Width(25)))
                 {
-                    batchConditions.RemoveAt(i);
+                    conditions.RemoveAt(i);
                     break;
                 }
                 EditorGUILayout.EndHorizontal();
             }
             
-            if (GUILayout.Button("清空所有条件"))
+            if (showClearButton && GUILayout.Button("清空列表"))
             {
-                batchConditions.Clear();
+                conditions.Clear();
             }
         }
     }
@@ -1187,7 +1378,7 @@ public class AnimatorControllerBatchEditor : EditorWindow
             transition.offset = batchTransitionOffset;
             transition.canTransitionToSelf = batchCanTransitionToSelf;
             
-            // 根据模式修改条件 - 确保条件数组被正确替换
+            // 根据模式修改条件
             ModifyTransitionConditions(transition);
             
             modifiedCount++;
@@ -1201,6 +1392,10 @@ public class AnimatorControllerBatchEditor : EditorWindow
         {
             EnsureParameterExists(condition.parameter);
         }
+        foreach (var replacement in conditionReplacements)
+        {
+            EnsureParameterExists(replacement.newCondition.parameter);
+        }
         
         EditorUtility.SetDirty(controller);
         Debug.Log($"成功修改了 {modifiedCount} 个过渡的参数和条件");
@@ -1210,43 +1405,67 @@ public class AnimatorControllerBatchEditor : EditorWindow
     {
         switch (conditionMode)
         {
-            case ConditionOperationMode.Replace:
-                // 创建新的条件数组并赋值
+            case ConditionOperationMode.ReplaceAll:
+                // 替换所有条件为新的条件列表
                 if (batchConditions.Count > 0)
                 {
                     transition.conditions = batchConditions.ToArray();
                 }
                 else
                 {
-                    // 如果批量条件列表为空，清空所有条件
                     transition.conditions = new AnimatorCondition[0];
+                }
+                break;
+                
+            case ConditionOperationMode.ReplaceSpecific:
+                // 替换指定的条件
+                if (conditionReplacements.Count > 0)
+                {
+                    var existingConditions = transition.conditions.ToList();
+                    bool modified = false;
+                    
+                    foreach (var replacement in conditionReplacements)
+                    {
+                        for (int i = 0; i < existingConditions.Count; i++)
+                        {
+                            if (AreConditionsEqual(existingConditions[i], replacement.originalCondition))
+                            {
+                                existingConditions[i] = replacement.newCondition;
+                                modified = true;
+                            }
+                        }
+                    }
+                    
+                    if (modified)
+                    {
+                        transition.conditions = existingConditions.ToArray();
+                    }
                 }
                 break;
                 
             case ConditionOperationMode.Add:
                 // 在现有条件基础上添加新条件
-                var existingConditions = transition.conditions.ToList();
+                var addConditions = transition.conditions.ToList();
                 foreach (var newCondition in batchConditions)
                 {
-                    // 避免添加重复条件 - 使用改进的条件比较方法
-                    if (!ConditionExists(existingConditions, newCondition))
+                    if (!ConditionExists(addConditions, newCondition))
                     {
-                        existingConditions.Add(newCondition);
+                        addConditions.Add(newCondition);
                     }
                 }
-                transition.conditions = existingConditions.ToArray();
+                transition.conditions = addConditions.ToArray();
                 break;
                 
             case ConditionOperationMode.Remove:
-                // 移除匹配的条件 - 使用改进的条件比较方法
+                // 移除匹配的条件
                 if (batchConditions.Count > 0)
                 {
-                    var conditionsToKeep = transition.conditions.ToList();
+                    var removeConditions = transition.conditions.ToList();
                     foreach (var conditionToRemove in batchConditions)
                     {
-                        conditionsToKeep.RemoveAll(c => AreConditionsEqual(c, conditionToRemove));
+                        removeConditions.RemoveAll(c => AreConditionsEqual(c, conditionToRemove));
                     }
-                    transition.conditions = conditionsToKeep.ToArray();
+                    transition.conditions = removeConditions.ToArray();
                 }
                 break;
         }
