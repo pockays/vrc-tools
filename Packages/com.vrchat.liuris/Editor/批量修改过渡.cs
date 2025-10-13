@@ -1228,11 +1228,8 @@ public class AnimatorControllerBatchEditor : EditorWindow
                 var existingConditions = transition.conditions.ToList();
                 foreach (var newCondition in batchConditions)
                 {
-                    // 避免添加重复条件
-                    if (!existingConditions.Any(c => 
-                        c.parameter == newCondition.parameter && 
-                        c.mode == newCondition.mode && 
-                        Mathf.Approximately(c.threshold, newCondition.threshold)))
+                    // 避免添加重复条件 - 使用改进的条件比较方法
+                    if (!ConditionExists(existingConditions, newCondition))
                     {
                         existingConditions.Add(newCondition);
                     }
@@ -1241,16 +1238,13 @@ public class AnimatorControllerBatchEditor : EditorWindow
                 break;
                 
             case ConditionOperationMode.Remove:
-                // 移除匹配的条件
+                // 移除匹配的条件 - 使用改进的条件比较方法
                 if (batchConditions.Count > 0)
                 {
                     var conditionsToKeep = transition.conditions.ToList();
                     foreach (var conditionToRemove in batchConditions)
                     {
-                        conditionsToKeep.RemoveAll(c => 
-                            c.parameter == conditionToRemove.parameter && 
-                            c.mode == conditionToRemove.mode && 
-                            Mathf.Approximately(c.threshold, conditionToRemove.threshold));
+                        conditionsToKeep.RemoveAll(c => AreConditionsEqual(c, conditionToRemove));
                     }
                     transition.conditions = conditionsToKeep.ToArray();
                 }
@@ -1261,6 +1255,38 @@ public class AnimatorControllerBatchEditor : EditorWindow
         if (transition.conditions == null)
         {
             transition.conditions = new AnimatorCondition[0];
+        }
+    }
+
+    // 改进的条件比较方法
+    private bool ConditionExists(List<AnimatorCondition> conditions, AnimatorCondition targetCondition)
+    {
+        return conditions.Any(c => AreConditionsEqual(c, targetCondition));
+    }
+
+    private bool AreConditionsEqual(AnimatorCondition condition1, AnimatorCondition condition2)
+    {
+        // 比较参数和模式
+        if (condition1.parameter != condition2.parameter || condition1.mode != condition2.mode)
+            return false;
+
+        // 根据条件模式使用不同的阈值比较策略
+        switch (condition1.mode)
+        {
+            case AnimatorConditionMode.If:
+            case AnimatorConditionMode.IfNot:
+                // 对于布尔类型的条件，阈值应该是0或1
+                return Mathf.RoundToInt(condition1.threshold) == Mathf.RoundToInt(condition2.threshold);
+                
+            case AnimatorConditionMode.Equals:
+            case AnimatorConditionMode.NotEqual:
+            case AnimatorConditionMode.Less:
+            case AnimatorConditionMode.Greater:
+                // 对于数值比较，使用更宽松的浮点数比较
+                return Mathf.Abs(condition1.threshold - condition2.threshold) < 0.0001f;
+                
+            default:
+                return Mathf.Abs(condition1.threshold - condition2.threshold) < 0.0001f;
         }
     }
 
