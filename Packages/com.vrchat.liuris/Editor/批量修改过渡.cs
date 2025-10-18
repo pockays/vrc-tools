@@ -58,6 +58,12 @@ public class AnimatorControllerBatchEditor : EditorWindow
     // 层选择相关
     private string selectedLayerName = "";
 
+    // 递增条件生成参数
+    private string incrementParameterName = "NewParameter";
+    private AnimatorConditionMode incrementConditionMode = AnimatorConditionMode.Equals;
+    private int startValue = 0;
+    private int incrementStep = 1;
+
     // 过渡信息类
     [System.Serializable]
     private class TransitionInfo
@@ -135,6 +141,9 @@ public class AnimatorControllerBatchEditor : EditorWindow
         
         // AnyState 生成部分
         DrawAnyStateGenerationSection();
+        
+        // 新增的递增条件生成部分
+        DrawIncrementConditionsSection();
         
         EditorGUILayout.EndScrollView();
     }
@@ -1251,6 +1260,160 @@ public class AnimatorControllerBatchEditor : EditorWindow
         EditorGUILayout.EndVertical();
     }
 
+    private void DrawIncrementConditionsSection()
+    {
+        EditorGUILayout.Space();
+        EditorGUILayout.LabelField("4. 递增条件生成", EditorStyles.boldLabel);
+        
+        EditorGUILayout.BeginVertical("box");
+        
+        EditorGUILayout.HelpBox("按照选中过渡的顺序，为每个过渡添加递增的条件值", MessageType.Info);
+        
+        incrementParameterName = EditorGUILayout.TextField("参数名称", incrementParameterName);
+        incrementConditionMode = (AnimatorConditionMode)EditorGUILayout.EnumPopup("条件模式", incrementConditionMode);
+        startValue = EditorGUILayout.IntField("起始值", startValue);
+        incrementStep = EditorGUILayout.IntField("递增步长", incrementStep);
+        
+        EditorGUILayout.LabelField($"预览: {incrementParameterName} {incrementConditionMode} {startValue}, {incrementParameterName} {incrementConditionMode} {startValue + incrementStep}, ...", EditorStyles.miniLabel);
+        
+        EditorGUILayout.BeginHorizontal();
+        if (GUILayout.Button("添加递增条件到选中过渡"))
+        {
+            AddIncrementConditionsToSelectedTransitions();
+        }
+        
+        if (GUILayout.Button("替换为递增条件"))
+        {
+            ReplaceWithIncrementConditions();
+        }
+        EditorGUILayout.EndHorizontal();
+        
+        EditorGUILayout.EndVertical();
+    }
+
+    private void AddIncrementConditionsToSelectedTransitions()
+ {
+    if (selectedTransitions.Count == 0)
+    {
+        EditorUtility.DisplayDialog("错误", "没有选中的过渡", "确定");
+        return;
+    }
+
+    if (string.IsNullOrEmpty(incrementParameterName))
+    {
+        EditorUtility.DisplayDialog("错误", "请输入参数名称", "确定");
+        return;
+    }
+
+    Undo.RegisterCompleteObjectUndo(controller, "添加递增条件到过渡");
+    
+    // 确保参数存在
+    EnsureParameterExists(incrementParameterName);
+    
+    int currentValue = startValue;
+    int modifiedCount = 0;
+    
+    // 反转列表，让UI中显示的第一个过渡获得起始值
+    var reversedTransitions = selectedTransitions.ToList();
+    
+    foreach (var transitionInfo in reversedTransitions)
+    {
+        var transition = transitionInfo.transition;
+        if (transition == null) continue;
+
+        Undo.RegisterCompleteObjectUndo(transition, "添加递增条件");
+        
+        // 获取现有条件
+        var existingConditions = transition.conditions.ToList();
+        
+        // 创建新的递增条件
+        var incrementCondition = new AnimatorCondition
+        {
+            parameter = incrementParameterName,
+            mode = incrementConditionMode,
+            threshold = currentValue
+        };
+        
+        // 检查是否已存在相同参数的条件，如果存在则替换，否则添加
+        bool replaced = false;
+        for (int i = 0; i < existingConditions.Count; i++)
+        {
+            if (existingConditions[i].parameter == incrementParameterName)
+            {
+                existingConditions[i] = incrementCondition;
+                replaced = true;
+                break;
+            }
+        }
+        
+        if (!replaced)
+        {
+            existingConditions.Add(incrementCondition);
+        }
+        
+        // 应用新条件
+        transition.conditions = existingConditions.ToArray();
+        EditorUtility.SetDirty(transition);
+        
+        currentValue += incrementStep;
+        modifiedCount++;
+    }
+    
+    EditorUtility.SetDirty(controller);
+    Debug.Log($"成功为 {modifiedCount} 个过渡添加了递增条件，从 {incrementParameterName} {incrementConditionMode} {startValue} 开始，步长为 {incrementStep}");
+}
+
+    private void ReplaceWithIncrementConditions()
+{
+    if (selectedTransitions.Count == 0)
+    {
+        EditorUtility.DisplayDialog("错误", "没有选中的过渡", "确定");
+        return;
+    }
+
+    if (string.IsNullOrEmpty(incrementParameterName))
+    {
+        EditorUtility.DisplayDialog("错误", "请输入参数名称", "确定");
+        return;
+    }
+
+    Undo.RegisterCompleteObjectUndo(controller, "替换为递增条件");
+    
+    // 确保参数存在
+    EnsureParameterExists(incrementParameterName);
+    
+    int currentValue = startValue;
+    int modifiedCount = 0;
+    
+    // 反转列表，让UI中显示的第一个过渡获得起始值
+    var reversedTransitions = selectedTransitions.ToList();
+    
+    foreach (var transitionInfo in reversedTransitions)
+    {
+        var transition = transitionInfo.transition;
+        if (transition == null) continue;
+
+        Undo.RegisterCompleteObjectUndo(transition, "替换为递增条件");
+        
+        // 创建新的递增条件（替换所有现有条件）
+        var incrementCondition = new AnimatorCondition
+        {
+            parameter = incrementParameterName,
+            mode = incrementConditionMode,
+            threshold = currentValue
+        };
+        
+        // 替换所有条件为单个递增条件
+        transition.conditions = new AnimatorCondition[] { incrementCondition };
+        EditorUtility.SetDirty(transition);
+        
+        currentValue += incrementStep;
+        modifiedCount++;
+    }
+    
+    EditorUtility.SetDirty(controller);
+    Debug.Log($"成功将 {modifiedCount} 个过渡的条件替换为递增条件，从 {incrementParameterName} {incrementConditionMode} {startValue} 开始，步长为 {incrementStep}");
+}
     private void GenerateAnyStateInSelectedLayer()
     {
         if (string.IsNullOrEmpty(selectedLayerName))
