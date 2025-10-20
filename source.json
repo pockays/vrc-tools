@@ -33,7 +33,8 @@
         "Narazaka/FloorAdjuster",
         "nuomew/nuomewtoolbox-Parameter",
         "lilxyzw/lilAvatarUtils",
-        "bdunderscore/ndmf"
+        "bdunderscore/ndmf",
+        "vrcd-community/vrchat-sdk-patcher"
     ],
     "packages":[
         {
