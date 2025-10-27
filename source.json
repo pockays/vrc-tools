@@ -34,7 +34,8 @@
         "nuomew/nuomewtoolbox-Parameter",
         "lilxyzw/lilAvatarUtils",
         "bdunderscore/ndmf",
-        "vrcd-community/vrchat-sdk-patcher"
+        "vrcd-community/vrchat-sdk-patcher",
+        "kurotu/VRCQuestTools"
     ],
     "packages":[
         {
