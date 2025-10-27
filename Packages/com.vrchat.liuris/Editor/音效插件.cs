@@ -99,7 +99,7 @@ public class SimpleOperationSoundPlayer : EditorWindow
     }
     #endregion
 
-    #region 音效播放核心逻辑（使用AudioSource替代方案）
+    #region 音效播放核心逻辑（修复版）
     private static AudioSource audioSource;
     
     private static void EnsureAudioSource()
@@ -107,7 +107,9 @@ public class SimpleOperationSoundPlayer : EditorWindow
         if (audioSource == null)
         {
             // 创建一个隐藏的GameObject来播放音效
-            GameObject soundPlayerObject = new GameObject("SoundPlayer");
+            GameObject soundPlayerObject = new GameObject("EditorSoundPlayer");
+            
+            // 添加AudioSource组件
             audioSource = soundPlayerObject.AddComponent<AudioSource>();
             audioSource.playOnAwake = false;
             audioSource.volume = volume;
@@ -159,6 +161,18 @@ public class SimpleOperationSoundPlayer : EditorWindow
     private static bool IsSoundPlaying()
     {
         return audioSource != null && audioSource.isPlaying;
+    }
+
+    // 清理资源
+    [UnityEditor.Callbacks.DidReloadScripts]
+    private static void OnScriptsReloaded()
+    {
+        // 重新初始化音频源
+        if (audioSource != null)
+        {
+            GameObject.DestroyImmediate(audioSource.gameObject);
+            audioSource = null;
+        }
     }
     #endregion
 
