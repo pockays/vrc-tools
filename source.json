@@ -35,7 +35,8 @@
         "lilxyzw/lilAvatarUtils",
         "bdunderscore/ndmf",
         "vrcd-community/vrchat-sdk-patcher",
-        "kurotu/VRCQuestTools"
+        "kurotu/VRCQuestTools"，
+        "vrcyue/MeshUVCutTool"
     ],
     "packages":[
         {
