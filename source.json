@@ -37,7 +37,7 @@
         "vrcd-community/vrchat-sdk-patcher",
         "kurotu/VRCQuestTools",
         "vrcyue/MeshUVCutTool",
-        "whiteflare/Unlit_WF_ShaderSuite/tree/head_unity2021URP"
+        "whiteflare/Unlit_WF_ShaderSuite"
     ],
     "packages":[
         {
