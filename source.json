@@ -36,7 +36,8 @@
         "bdunderscore/ndmf",
         "vrcd-community/vrchat-sdk-patcher",
         "kurotu/VRCQuestTools",
-        "vrcyue/MeshUVCutTool"
+        "vrcyue/MeshUVCutTool",
+        "whiteflare/Unlit_WF_ShaderSuite/tree/head_unity2021URP"
     ],
     "packages":[
         {
