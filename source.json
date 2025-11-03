@@ -36,7 +36,8 @@
         "bdunderscore/ndmf",
         "vrcd-community/vrchat-sdk-patcher",
         "kurotu/VRCQuestTools",
-        "vrcyue/MeshUVCutTool"
+        "vrcyue/MeshUVCutTool",
+        "rrazgriz/RATS"
     ],
     "packages":[
         {
