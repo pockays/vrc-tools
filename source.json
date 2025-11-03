@@ -37,7 +37,8 @@
         "vrcd-community/vrchat-sdk-patcher",
         "kurotu/VRCQuestTools",
         "vrcyue/MeshUVCutTool",
-        "rrazgriz/RATS"
+        "rrazgriz/RATS",
+        "HhotateA/AvatarModifyTools"
     ],
     "packages":[
         {
