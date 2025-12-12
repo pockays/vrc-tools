@@ -36,8 +36,7 @@
         "vrcd-community/vrchat-sdk-patcher",
         "kurotu/VRCQuestTools",
         "vrcyue/MeshUVCutTool",
-        "rrazgriz/RATS",
-        "BlackStartx/VRC-Gesture-Manager"
+        "rrazgriz/RATS"
     ],
     "packages": [
         {
