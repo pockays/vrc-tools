@@ -221,16 +221,19 @@ public class AnimatorPreviewWindow : EditorWindow
     {
         if (index < 0 || index >= animationClips.Count) return;
         
+        // 修复动画叠加的关键：重新启用Animator并重置
+        if (selectedAnimator != null)
+        {
+            selectedAnimator.enabled = true;
+            selectedAnimator.Rebind();
+            selectedAnimator.enabled = false;
+        }
+        
         currentClip = animationClips[index];
         animationLength = currentClip.length;
         animationTime = 0f;
         isPlaying = true;
         lastUpdateTime = EditorApplication.timeSinceStartup;
-        
-        if (selectedAnimator != null)
-        {
-            selectedAnimator.enabled = false;
-        }
         
         SampleAnimationAtTime();
         Repaint();
@@ -249,6 +252,13 @@ public class AnimatorPreviewWindow : EditorWindow
     private void SampleAnimationAtTime()
     {
         if (currentClip == null || selectedObject == null) return;
+        
+        // 确保Animator被禁用，这样我们才能手动采样
+        if (selectedAnimator != null && selectedAnimator.enabled)
+        {
+            selectedAnimator.enabled = false;
+        }
+        
         currentClip.SampleAnimation(selectedObject, animationTime);
     }
     
