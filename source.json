@@ -21,7 +21,6 @@
         "Thryrallo/VRC-Avatar-Performance-Tools",
         "anatawa12/AvatarOptimizer",
         "suzuryg/face-emo",
-        "BlackStartx/VRC-Gesture-Manager",
         "whiteflare/AvatarTools",
         "VRLabs/Avatars-3.0-Manager",
         "enitimeago/make-it-mmd",
@@ -37,7 +36,8 @@
         "vrcd-community/vrchat-sdk-patcher",
         "kurotu/VRCQuestTools",
         "vrcyue/MeshUVCutTool",
-        "rrazgriz/RATS"
+        "rrazgriz/RATS",
+        "BlackStartx/VRC-Gesture-Manager"
     ],
     "packages":[
         {
