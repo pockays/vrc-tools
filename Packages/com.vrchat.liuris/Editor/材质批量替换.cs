@@ -8,19 +8,6 @@ public class MaterialManager : EditorWindow
     private Vector2 scrollPosition;
     private Dictionary<Material, List<GameObject>> materialMap;
     private List<Material> uniqueMaterials;
-    private Dictionary<Material, Material> replacementMap = new Dictionary<Material, Material>();
-
-    // 撤回操作记录
-    private class MaterialReplacement
-    {
-        public GameObject gameObject;
-        public Material originalMaterial;
-        public Material newMaterial;
-        public int materialIndex;
-    }
-
-    private List<List<MaterialReplacement>> undoStack = new List<List<MaterialReplacement>>();
-    private int maxUndoSteps = 10;
 
     [MenuItem("Tools/材质管理器")]
     public static void ShowWindow()
@@ -43,7 +30,6 @@ public class MaterialManager : EditorWindow
     {
         materialMap = new Dictionary<Material, List<GameObject>>();
         uniqueMaterials = new List<Material>();
-        replacementMap.Clear();
 
         GameObject[] selectedObjects = Selection.gameObjects;
         if (selectedObjects == null || selectedObjects.Length == 0) return;
@@ -61,11 +47,6 @@ public class MaterialManager : EditorWindow
         }
 
         uniqueMaterials = uniqueMaterials.OrderBy(m => m.name).ToList();
-        
-        foreach (var material in uniqueMaterials)
-        {
-            replacementMap[material] = null;
-        }
     }
 
     private void CollectMaterialsFromObject(GameObject obj)
@@ -74,26 +55,6 @@ public class MaterialManager : EditorWindow
         if (renderer != null)
         {
             foreach (Material material in renderer.sharedMaterials)
-            {
-                if (material == null) continue;
-
-                if (!materialMap.ContainsKey(material))
-                {
-                    materialMap[material] = new List<GameObject>();
-                    uniqueMaterials.Add(material);
-                }
-                
-                if (!materialMap[material].Contains(obj))
-                {
-                    materialMap[material].Add(obj);
-                }
-            }
-        }
-
-        var skinnedRenderer = obj.GetComponent<SkinnedMeshRenderer>();
-        if (skinnedRenderer != null)
-        {
-            foreach (Material material in skinnedRenderer.sharedMaterials)
             {
                 if (material == null) continue;
 
@@ -122,416 +83,175 @@ public class MaterialManager : EditorWindow
 
     private void OnGUI()
     {
-        // 使用垂直布局确保所有内容都在滚动视图内
-        EditorGUILayout.BeginVertical();
-        
         GUILayout.Label($"选中的对象: {Selection.gameObjects.Length} 个", EditorStyles.boldLabel);
         
-        DrawUndoControls();
-        
-        // 主滚动视图 - 包含所有内容
-        scrollPosition = EditorGUILayout.BeginScrollView(scrollPosition, GUILayout.ExpandWidth(true));
-        
-        DrawMaterialManagementContent();
-        
-        EditorGUILayout.EndScrollView();
-        
-        EditorGUILayout.EndVertical();
-    }
-
-    private void DrawUndoControls()
-    {
-        EditorGUILayout.BeginHorizontal();
-        
-        GUILayout.Label("撤回操作:", EditorStyles.boldLabel);
-        
-        bool canUndo = undoStack.Count > 0;
-        EditorGUI.BeginDisabledGroup(!canUndo);
-        if (GUILayout.Button("撤回", GUILayout.Width(60)))
-        {
-            UndoLastOperation();
-        }
-        EditorGUI.EndDisabledGroup();
-
-        if (GUILayout.Button("清空撤回记录", GUILayout.Width(100)))
-        {
-            ClearUndoStack();
-        }
-
-        GUILayout.Label($"可撤回步骤: {undoStack.Count}/{maxUndoSteps}", EditorStyles.miniLabel);
-        
-        EditorGUILayout.EndHorizontal();
-        
-        GUILayout.Space(10);
-    }
-
-    private void DrawMaterialManagementContent()
-    {
-        GUILayout.Label("材质球列表 - 每个材质可单独指定替换目标", EditorStyles.boldLabel);
+        scrollPosition = EditorGUILayout.BeginScrollView(scrollPosition, 
+            GUILayout.ExpandWidth(true), 
+            GUILayout.ExpandHeight(true));
         
         if (uniqueMaterials == null || uniqueMaterials.Count == 0)
         {
             EditorGUILayout.HelpBox("请选中一个或多个包含材质的对象", MessageType.Info);
-            return;
         }
-
-        // 材质列表区域 - 固定高度，确保可以滚动
-        EditorGUILayout.BeginVertical(GUILayout.Height(400));
-        foreach (Material material in uniqueMaterials)
+        else
         {
-            EditorGUILayout.BeginVertical("box");
-            EditorGUILayout.BeginHorizontal();
-
-            // 显示原始材质信息
-            EditorGUILayout.BeginVertical(GUILayout.Width(250));
-            EditorGUILayout.LabelField("原始材质", EditorStyles.miniBoldLabel);
-            EditorGUILayout.ObjectField(material, typeof(Material), false);
-            GUILayout.Label($"使用对象: {materialMap[material].Count}", EditorStyles.miniLabel);
-            GUILayout.Label($"着色器: {material.shader.name}", EditorStyles.miniLabel);
-            EditorGUILayout.EndVertical();
-
-            // 预览材质球
-            GUILayout.BeginVertical();
-            EditorGUILayout.LabelField("预览", EditorStyles.miniBoldLabel, GUILayout.Width(50));
-            GUILayout.Box(AssetPreview.GetAssetPreview(material), GUILayout.Width(50), GUILayout.Height(50));
-            GUILayout.EndVertical();
-
-            // 替换材质选择
-            EditorGUILayout.BeginVertical(GUILayout.Width(250));
-            EditorGUILayout.LabelField("替换为", EditorStyles.miniBoldLabel);
-            replacementMap[material] = (Material)EditorGUILayout.ObjectField(
-                replacementMap[material], 
-                typeof(Material), 
-                false);
-            EditorGUILayout.EndVertical();
-
-            // 操作按钮
-            EditorGUILayout.BeginVertical();
-            EditorGUILayout.LabelField("操作", EditorStyles.miniBoldLabel, GUILayout.Width(40));
-            if (GUILayout.Button("替换", GUILayout.Width(60)))
-            {
-                ReplaceSingleMaterial(material);
-            }
-            if (GUILayout.Button("选择", GUILayout.Width(60)))
-            {
-                SelectObjectsWithMaterial(material);
-            }
-            EditorGUILayout.EndVertical();
-
-            EditorGUILayout.EndHorizontal();
-            EditorGUILayout.EndVertical();
+            EditorGUILayout.BeginVertical(GUILayout.ExpandWidth(true));
             
-            GUILayout.Space(5);
+            foreach (Material material in uniqueMaterials)
+            {
+                DrawMaterialRow(material);
+            }
+            
+            EditorGUILayout.EndVertical();
         }
+        
+        EditorGUILayout.EndScrollView();
+    }
+
+    private void DrawMaterialRow(Material material)
+    {
+        EditorGUILayout.BeginHorizontal("box", GUILayout.Height(65), GUILayout.ExpandWidth(true));
+        
+        // 原始材质信息和预览
+        DrawMaterialWithPreview("原始材质", material, false);
+        
+        // 替换材质信息和预览
+        DrawMaterialWithPreview("替换为", GetCurrentAppliedMaterial(material), true);
+        
+        // 选择按钮
+        EditorGUILayout.BeginVertical(GUILayout.Width(50));
+        GUILayout.FlexibleSpace();
+        if (GUILayout.Button("选择", GUILayout.Width(50), GUILayout.Height(30)))
+        {
+            SelectObjectsWithMaterial(material);
+        }
+        GUILayout.FlexibleSpace();
         EditorGUILayout.EndVertical();
 
-        GUILayout.Space(10);
-
-        // 批量操作区域 - 固定在底部
-        DrawBatchOperations();
-    }
-
-    private void DrawBatchOperations()
-    {
-        GUILayout.Label("批量操作", EditorStyles.boldLabel);
-        
-        EditorGUILayout.BeginHorizontal();
-        if (GUILayout.Button("批量替换所有已设置材质", GUILayout.Width(180)))
-        {
-            BatchReplaceAllSetMaterials();
-        }
-        if (GUILayout.Button("清除所有替换设置", GUILayout.Width(140)))
-        {
-            ClearAllReplacements();
-        }
-        if (GUILayout.Button("刷新列表", GUILayout.Width(80)))
-        {
-            RefreshMaterialList();
-        }
         EditorGUILayout.EndHorizontal();
-
-        int materialsToReplace = replacementMap.Values.Count(m => m != null);
-        if (materialsToReplace > 0)
-        {
-            int totalObjects = 0;
-            foreach (var kvp in replacementMap)
-            {
-                if (kvp.Value != null && materialMap.ContainsKey(kvp.Key))
-                    totalObjects += materialMap[kvp.Key].Count;
-            }
-            
-            EditorGUILayout.HelpBox(
-                $"{materialsToReplace} 个材质已设置替换目标，将影响 {totalObjects} 个对象", 
-                MessageType.Info);
-        }
     }
 
-    private void ReplaceSingleMaterial(Material oldMaterial)
+    private void DrawMaterialWithPreview(string label, Material material, bool isReplaceField)
     {
-        if (oldMaterial == null || !replacementMap.ContainsKey(oldMaterial) || replacementMap[oldMaterial] == null)
+        EditorGUILayout.BeginVertical(GUILayout.ExpandWidth(true));
+        
+        EditorGUILayout.LabelField(label, EditorStyles.miniBoldLabel, GUILayout.Height(15));
+        
+        EditorGUILayout.BeginHorizontal(GUILayout.ExpandWidth(true));
+        
+        // 预览
+        EditorGUILayout.BeginVertical(GUILayout.Width(45));
+        GUILayout.Box(AssetPreview.GetAssetPreview(material) ?? Texture2D.whiteTexture, 
+            GUILayout.Width(40), GUILayout.Height(40));
+        EditorGUILayout.EndVertical();
+        
+        // 材质选择框
+        EditorGUILayout.BeginVertical(GUILayout.ExpandWidth(true));
+        
+        if (isReplaceField)
         {
-            EditorUtility.DisplayDialog("错误", "请先选择要替换的目标材质", "确定");
-            return;
+            Material currentMaterial = GetCurrentAppliedMaterial(FindOriginalMaterial(material));
+            EditorGUI.BeginChangeCheck();
+            Material newMaterial = (Material)EditorGUILayout.ObjectField(
+                material, 
+                typeof(Material), 
+                false,
+                GUILayout.ExpandWidth(true));
+            
+            if (EditorGUI.EndChangeCheck())
+            {
+                ReplaceMaterial(FindOriginalMaterial(material), newMaterial);
+            }
+        }
+        else
+        {
+            EditorGUILayout.ObjectField(material, typeof(Material), false, GUILayout.ExpandWidth(true));
+        }
+        
+        if (!isReplaceField && material != null)
+        {
+            GUILayout.Label($"使用对象: {materialMap[material].Count}", EditorStyles.miniLabel, GUILayout.Height(15));
+        }
+        
+        EditorGUILayout.EndVertical();
+        
+        EditorGUILayout.EndHorizontal();
+        EditorGUILayout.EndVertical();
+    }
+
+    private Material FindOriginalMaterial(Material currentMaterial)
+    {
+        if (currentMaterial == null) return null;
+        
+        if (uniqueMaterials.Contains(currentMaterial))
+        {
+            return currentMaterial;
+        }
+        
+        foreach (var originalMaterial in uniqueMaterials)
+        {
+            if (GetCurrentAppliedMaterial(originalMaterial) == currentMaterial)
+            {
+                return originalMaterial;
+            }
+        }
+        
+        return currentMaterial;
+    }
+
+    private Material GetCurrentAppliedMaterial(Material originalMaterial)
+    {
+        if (originalMaterial == null || !materialMap.ContainsKey(originalMaterial) || materialMap[originalMaterial].Count == 0)
+            return originalMaterial;
+
+        GameObject firstObj = materialMap[originalMaterial][0];
+        if (firstObj == null) return originalMaterial;
+
+        Renderer renderer = firstObj.GetComponent<Renderer>();
+        if (renderer != null && renderer.sharedMaterials.Length > 0)
+        {
+            return renderer.sharedMaterials[0];
         }
 
-        Material newMaterial = replacementMap[oldMaterial];
-        int objectCount = materialMap[oldMaterial].Count;
+        return originalMaterial;
+    }
 
-        if (!EditorUtility.DisplayDialog("确认替换", 
-            $"确定要将材质 '{oldMaterial.name}' 替换为 '{newMaterial.name}' 吗？\n影响对象: {objectCount}", 
-            "确定", "取消"))
-        {
-            return;
-        }
-
-        List<MaterialReplacement> replacements = new List<MaterialReplacement>();
-        int replaceCount = 0;
-
+    private void ReplaceMaterial(Material oldMaterial, Material newMaterial)
+    {
+        if (oldMaterial == null) return;
+        
+        var affectedObjects = new HashSet<UnityEngine.Object>();
+        
         foreach (GameObject obj in materialMap[oldMaterial])
         {
-            bool replaced = ReplaceMaterialInObject(obj, oldMaterial, newMaterial, replacements);
-            if (replaced) replaceCount++;
-        }
-
-        if (replaceCount > 0)
-        {
-            // 记录撤回操作
-            AddToUndoStack(replacements);
+            if (obj == null) continue;
             
-            // 注册Unity的撤回操作
-            Undo.RegisterCompleteObjectUndo(GetAffectedObjects(replacements), $"替换材质 {oldMaterial.name} -> {newMaterial.name}");
-        }
-
-        EditorUtility.DisplayDialog("完成", $"成功替换 {replaceCount} 个材质实例", "确定");
-        RefreshMaterialList();
-    }
-
-    private void BatchReplaceAllSetMaterials()
-    {
-        var materialsToReplace = replacementMap.Where(kvp => kvp.Value != null).ToList();
-        if (materialsToReplace.Count == 0)
-        {
-            EditorUtility.DisplayDialog("提示", "没有设置任何材质替换目标", "确定");
-            return;
-        }
-
-        // 计算总影响
-        int totalReplacements = 0;
-        foreach (var kvp in materialsToReplace)
-        {
-            if (materialMap.ContainsKey(kvp.Key))
-                totalReplacements += materialMap[kvp.Key].Count;
-        }
-
-        if (!EditorUtility.DisplayDialog("确认批量替换", 
-            $"确定要批量替换 {materialsToReplace.Count} 个材质吗？\n影响对象: {totalReplacements}", 
-            "确定", "取消"))
-        {
-            return;
-        }
-
-        List<MaterialReplacement> allReplacements = new List<MaterialReplacement>();
-        int actualReplaceCount = 0;
-
-        foreach (var kvp in materialsToReplace)
-        {
-            foreach (GameObject obj in materialMap[kvp.Key])
+            Renderer renderer = obj.GetComponent<Renderer>();
+            if (renderer != null)
             {
-                bool replaced = ReplaceMaterialInObject(obj, kvp.Key, kvp.Value, allReplacements);
-                if (replaced) actualReplaceCount++;
-            }
-        }
-
-        if (actualReplaceCount > 0)
-        {
-            // 记录撤回操作
-            AddToUndoStack(allReplacements);
-            
-            // 注册Unity的撤回操作
-            Undo.RegisterCompleteObjectUndo(GetAffectedObjects(allReplacements), "批量替换材质");
-        }
-
-        EditorUtility.DisplayDialog("完成", $"成功替换 {actualReplaceCount} 个材质实例", "确定");
-        RefreshMaterialList();
-    }
-
-    private bool ReplaceMaterialInObject(GameObject obj, Material oldMaterial, Material newMaterial, List<MaterialReplacement> replacements = null)
-    {
-        Renderer renderer = obj.GetComponent<Renderer>();
-        if (renderer != null)
-        {
-            Material[] materials = renderer.sharedMaterials;
-            bool replaced = false;
-            
-            for (int i = 0; i < materials.Length; i++)
-            {
-                if (materials[i] == oldMaterial)
-                {
-                    // 记录替换信息用于撤回
-                    if (replacements != null)
-                    {
-                        replacements.Add(new MaterialReplacement
-                        {
-                            gameObject = obj,
-                            originalMaterial = oldMaterial,
-                            newMaterial = newMaterial,
-                            materialIndex = i
-                        });
-                    }
-
-                    materials[i] = newMaterial;
-                    replaced = true;
-                }
-            }
-            
-            if (replaced)
-            {
-                renderer.sharedMaterials = materials;
-                return true;
-            }
-        }
-
-        // 检查SkinnedMeshRenderer
-        var skinnedRenderer = obj.GetComponent<SkinnedMeshRenderer>();
-        if (skinnedRenderer != null)
-        {
-            Material[] materials = skinnedRenderer.sharedMaterials;
-            bool replaced = false;
-            
-            for (int i = 0; i < materials.Length; i++)
-            {
-                if (materials[i] == oldMaterial)
-                {
-                    // 记录替换信息用于撤回
-                    if (replacements != null)
-                    {
-                        replacements.Add(new MaterialReplacement
-                        {
-                            gameObject = obj,
-                            originalMaterial = oldMaterial,
-                            newMaterial = newMaterial,
-                            materialIndex = i
-                        });
-                    }
-
-                    materials[i] = newMaterial;
-                    replaced = true;
-                }
-            }
-            
-            if (replaced)
-            {
-                skinnedRenderer.sharedMaterials = materials;
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    private void AddToUndoStack(List<MaterialReplacement> replacements)
-    {
-        undoStack.Add(new List<MaterialReplacement>(replacements));
-        
-        // 限制撤回栈大小
-        if (undoStack.Count > maxUndoSteps)
-        {
-            undoStack.RemoveAt(0);
-        }
-    }
-
-    private void UndoLastOperation()
-    {
-        if (undoStack.Count == 0) return;
-
-        var lastOperation = undoStack[undoStack.Count - 1];
-        int undoCount = 0;
-
-        foreach (var replacement in lastOperation)
-        {
-            if (replacement.gameObject != null)
-            {
-                Renderer renderer = replacement.gameObject.GetComponent<Renderer>();
-                var skinnedRenderer = replacement.gameObject.GetComponent<SkinnedMeshRenderer>();
-
-                if (renderer != null)
-                {
-                    Material[] materials = renderer.sharedMaterials;
-                    if (replacement.materialIndex < materials.Length)
-                    {
-                        materials[replacement.materialIndex] = replacement.originalMaterial;
-                        renderer.sharedMaterials = materials;
-                        undoCount++;
-                    }
-                }
-                else if (skinnedRenderer != null)
-                {
-                    Material[] materials = skinnedRenderer.sharedMaterials;
-                    if (replacement.materialIndex < materials.Length)
-                    {
-                        materials[replacement.materialIndex] = replacement.originalMaterial;
-                        skinnedRenderer.sharedMaterials = materials;
-                        undoCount++;
-                    }
-                }
-            }
-        }
-
-        undoStack.RemoveAt(undoStack.Count - 1);
-        
-        // 注册Unity的撤回操作的撤回（重做）
-        Undo.RegisterCompleteObjectUndo(GetAffectedObjects(lastOperation), "撤回材质替换");
-
-        Debug.Log($"已撤回 {undoCount} 个材质替换操作");
-        RefreshMaterialList();
-        Repaint();
-    }
-
-    private UnityEngine.Object[] GetAffectedObjects(List<MaterialReplacement> replacements)
-    {
-        var objects = new HashSet<UnityEngine.Object>();
-        foreach (var replacement in replacements)
-        {
-            if (replacement.gameObject != null)
-            {
-                objects.Add(replacement.gameObject);
-                var renderer = replacement.gameObject.GetComponent<Renderer>();
-                if (renderer != null) objects.Add(renderer);
+                affectedObjects.Add(obj);
+                affectedObjects.Add(renderer);
                 
-                var skinnedRenderer = replacement.gameObject.GetComponent<SkinnedMeshRenderer>();
-                if (skinnedRenderer != null) objects.Add(skinnedRenderer);
+                Material[] materials = renderer.sharedMaterials;
+                for (int i = 0; i < materials.Length; i++)
+                {
+                    if (materials[i] == oldMaterial)
+                    {
+                        materials[i] = newMaterial;
+                    }
+                }
+                renderer.sharedMaterials = materials;
             }
         }
-        return objects.ToArray();
-    }
 
-    private void ClearUndoStack()
-    {
-        undoStack.Clear();
-        Debug.Log("已清空撤回记录");
-    }
-
-    private void ClearAllReplacements()
-    {
-        foreach (var material in replacementMap.Keys.ToList())
-        {
-            replacementMap[material] = null;
-        }
-        Repaint();
+        Undo.RegisterCompleteObjectUndo(affectedObjects.ToArray(), 
+            $"材质替换: {oldMaterial.name} -> {(newMaterial == null ? "空" : newMaterial.name)}");
     }
 
     private void SelectObjectsWithMaterial(Material material)
     {
         if (material == null || !materialMap.ContainsKey(material)) return;
 
-        List<GameObject> objects = new List<GameObject>();
-        foreach (var obj in materialMap[material])
-        {
-            if (obj != null)
-                objects.Add(obj);
-        }
-
-        Selection.objects = objects.ToArray();
-        EditorUtility.DisplayDialog("选择完成", $"已选中 {objects.Count} 个使用材质 '{material.name}' 的对象", "确定");
+        Selection.objects = materialMap[material].Where(obj => obj != null).ToArray();
     }
 }
