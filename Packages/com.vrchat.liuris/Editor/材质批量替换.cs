@@ -6,9 +6,9 @@ using System.Linq;
 public class MaterialManager : EditorWindow
 {
     private Vector2 scrollPosition;
-    private Dictionary<Material, List<GameObject>> materialMap;
+    private Dictionary<Material, List<MaterialInfo>> materialMap;
     private List<Material> uniqueMaterials;
-
+    
     [MenuItem("Tools/材质管理器")]
     public static void ShowWindow()
     {
@@ -28,7 +28,7 @@ public class MaterialManager : EditorWindow
 
     private void RefreshMaterialList()
     {
-        materialMap = new Dictionary<Material, List<GameObject>>();
+        materialMap = new Dictionary<Material, List<MaterialInfo>>();
         uniqueMaterials = new List<Material>();
 
         GameObject[] selectedObjects = Selection.gameObjects;
@@ -52,21 +52,31 @@ public class MaterialManager : EditorWindow
     private void CollectMaterialsFromObject(GameObject obj)
     {
         Renderer renderer = obj.GetComponent<Renderer>();
-        if (renderer != null)
+        if (renderer != null && renderer.sharedMaterials != null)
         {
-            foreach (Material material in renderer.sharedMaterials)
+            for (int i = 0; i < renderer.sharedMaterials.Length; i++)
             {
+                Material material = renderer.sharedMaterials[i];
                 if (material == null) continue;
 
+                // 对于每个材质，我们都将其视为一个原始材质
                 if (!materialMap.ContainsKey(material))
                 {
-                    materialMap[material] = new List<GameObject>();
+                    materialMap[material] = new List<MaterialInfo>();
                     uniqueMaterials.Add(material);
                 }
                 
-                if (!materialMap[material].Contains(obj))
+                MaterialInfo info = new MaterialInfo
                 {
-                    materialMap[material].Add(obj);
+                    gameObject = obj,
+                    renderer = renderer,
+                    materialIndex = i,
+                    originalMaterial = material // 记录原始材质
+                };
+                
+                if (!materialMap[material].Exists(m => m.gameObject == obj && m.materialIndex == i))
+                {
+                    materialMap[material].Add(info);
                 }
             }
         }
@@ -97,9 +107,9 @@ public class MaterialManager : EditorWindow
         {
             EditorGUILayout.BeginVertical(GUILayout.ExpandWidth(true));
             
-            foreach (Material material in uniqueMaterials)
+            foreach (Material originalMaterial in uniqueMaterials)
             {
-                DrawMaterialRow(material);
+                DrawMaterialRow(originalMaterial);
             }
             
             EditorGUILayout.EndVertical();
@@ -108,22 +118,23 @@ public class MaterialManager : EditorWindow
         EditorGUILayout.EndScrollView();
     }
 
-    private void DrawMaterialRow(Material material)
+    private void DrawMaterialRow(Material originalMaterial)
     {
         EditorGUILayout.BeginHorizontal("box", GUILayout.Height(65), GUILayout.ExpandWidth(true));
         
-        // 原始材质信息和预览
-        DrawMaterialWithPreview("原始材质", material, false);
+        // 原始材质信息和预览 - 固定显示
+        DrawMaterialWithPreview("原始材质", originalMaterial, false, originalMaterial);
         
-        // 替换材质信息和预览
-        DrawMaterialWithPreview("替换为", GetCurrentAppliedMaterial(material), true);
+        // 替换材质信息和预览 - 实时显示当前实际材质
+        Material currentAppliedMaterial = GetCurrentAppliedMaterial(originalMaterial);
+        DrawMaterialWithPreview("替换为", currentAppliedMaterial, true, originalMaterial);
         
         // 选择按钮
         EditorGUILayout.BeginVertical(GUILayout.Width(50));
         GUILayout.FlexibleSpace();
         if (GUILayout.Button("选择", GUILayout.Width(50), GUILayout.Height(30)))
         {
-            SelectObjectsWithMaterial(material);
+            SelectObjectsWithMaterial(originalMaterial);
         }
         GUILayout.FlexibleSpace();
         EditorGUILayout.EndVertical();
@@ -131,7 +142,25 @@ public class MaterialManager : EditorWindow
         EditorGUILayout.EndHorizontal();
     }
 
-    private void DrawMaterialWithPreview(string label, Material material, bool isReplaceField)
+    private Material GetCurrentAppliedMaterial(Material originalMaterial)
+    {
+        if (originalMaterial == null || !materialMap.ContainsKey(originalMaterial) || materialMap[originalMaterial].Count == 0)
+            return originalMaterial;
+
+        // 从第一个对象获取当前实际应用的材质
+        MaterialInfo firstInfo = materialMap[originalMaterial][0];
+        if (firstInfo.gameObject == null || firstInfo.renderer == null) 
+            return originalMaterial;
+
+        if (firstInfo.materialIndex < firstInfo.renderer.sharedMaterials.Length)
+        {
+            return firstInfo.renderer.sharedMaterials[firstInfo.materialIndex];
+        }
+
+        return originalMaterial;
+    }
+
+    private void DrawMaterialWithPreview(string label, Material material, bool isReplaceField, Material originalMaterial)
     {
         EditorGUILayout.BeginVertical(GUILayout.ExpandWidth(true));
         
@@ -141,36 +170,51 @@ public class MaterialManager : EditorWindow
         
         // 预览
         EditorGUILayout.BeginVertical(GUILayout.Width(45));
-        GUILayout.Box(AssetPreview.GetAssetPreview(material) ?? Texture2D.whiteTexture, 
-            GUILayout.Width(40), GUILayout.Height(40));
+        if (material != null)
+        {
+            GUILayout.Box(AssetPreview.GetAssetPreview(material) ?? Texture2D.whiteTexture, 
+                GUILayout.Width(40), GUILayout.Height(40));
+        }
+        else
+        {
+            GUILayout.Box(Texture2D.whiteTexture, 
+                GUILayout.Width(40), GUILayout.Height(40));
+        }
         EditorGUILayout.EndVertical();
         
         // 材质选择框
         EditorGUILayout.BeginVertical(GUILayout.ExpandWidth(true));
         
-        if (isReplaceField)
+        if (isReplaceField && originalMaterial != null)
         {
-            Material currentMaterial = GetCurrentAppliedMaterial(FindOriginalMaterial(material));
+            // 实时获取当前材质
+            Material currentMaterial = GetCurrentAppliedMaterial(originalMaterial);
+            
             EditorGUI.BeginChangeCheck();
             Material newMaterial = (Material)EditorGUILayout.ObjectField(
-                material, 
+                currentMaterial, 
                 typeof(Material), 
                 false,
                 GUILayout.ExpandWidth(true));
             
-            if (EditorGUI.EndChangeCheck())
+            if (EditorGUI.EndChangeCheck() && newMaterial != currentMaterial)
             {
-                ReplaceMaterial(FindOriginalMaterial(material), newMaterial);
+                // 执行替换
+                ReplaceMaterial(originalMaterial, newMaterial);
+                
+                // 立即重绘以显示最新状态
+                Repaint();
             }
         }
         else
         {
-            EditorGUILayout.ObjectField(material, typeof(Material), false, GUILayout.ExpandWidth(true));
+            // 原始材质字段 - 固定显示
+            EditorGUILayout.ObjectField(originalMaterial, typeof(Material), false, GUILayout.ExpandWidth(true));
         }
         
-        if (!isReplaceField && material != null)
+        if (!isReplaceField && originalMaterial != null && materialMap.ContainsKey(originalMaterial))
         {
-            GUILayout.Label($"使用对象: {materialMap[material].Count}", EditorStyles.miniLabel, GUILayout.Height(15));
+            GUILayout.Label($"使用对象: {materialMap[originalMaterial].Count}", EditorStyles.miniLabel, GUILayout.Height(15));
         }
         
         EditorGUILayout.EndVertical();
@@ -179,79 +223,81 @@ public class MaterialManager : EditorWindow
         EditorGUILayout.EndVertical();
     }
 
-    private Material FindOriginalMaterial(Material currentMaterial)
-    {
-        if (currentMaterial == null) return null;
-        
-        if (uniqueMaterials.Contains(currentMaterial))
-        {
-            return currentMaterial;
-        }
-        
-        foreach (var originalMaterial in uniqueMaterials)
-        {
-            if (GetCurrentAppliedMaterial(originalMaterial) == currentMaterial)
-            {
-                return originalMaterial;
-            }
-        }
-        
-        return currentMaterial;
-    }
-
-    private Material GetCurrentAppliedMaterial(Material originalMaterial)
-    {
-        if (originalMaterial == null || !materialMap.ContainsKey(originalMaterial) || materialMap[originalMaterial].Count == 0)
-            return originalMaterial;
-
-        GameObject firstObj = materialMap[originalMaterial][0];
-        if (firstObj == null) return originalMaterial;
-
-        Renderer renderer = firstObj.GetComponent<Renderer>();
-        if (renderer != null && renderer.sharedMaterials.Length > 0)
-        {
-            return renderer.sharedMaterials[0];
-        }
-
-        return originalMaterial;
-    }
-
     private void ReplaceMaterial(Material oldMaterial, Material newMaterial)
     {
-        if (oldMaterial == null) return;
+        if (oldMaterial == null || !materialMap.ContainsKey(oldMaterial)) return;
         
-        var affectedObjects = new HashSet<UnityEngine.Object>();
+        // 收集所有需要修改的Renderer
+        List<Renderer> affectedRenderers = new List<Renderer>();
+        List<MaterialInfo> infosToReplace = new List<MaterialInfo>();
         
-        foreach (GameObject obj in materialMap[oldMaterial])
+        foreach (MaterialInfo info in materialMap[oldMaterial])
         {
-            if (obj == null) continue;
+            if (info.gameObject == null || info.renderer == null) continue;
             
-            Renderer renderer = obj.GetComponent<Renderer>();
-            if (renderer != null)
+            // 获取唯一的Renderer
+            if (!affectedRenderers.Contains(info.renderer))
             {
-                affectedObjects.Add(obj);
-                affectedObjects.Add(renderer);
-                
-                Material[] materials = renderer.sharedMaterials;
-                for (int i = 0; i < materials.Length; i++)
+                affectedRenderers.Add(info.renderer);
+            }
+            
+            infosToReplace.Add(info);
+        }
+        
+        if (affectedRenderers.Count == 0) return;
+        
+        // 注册撤销操作
+        Undo.RecordObjects(affectedRenderers.ToArray(), 
+            $"材质替换: {oldMaterial.name} -> {(newMaterial == null ? "空" : newMaterial.name)}");
+        
+        // 执行替换
+        foreach (MaterialInfo info in infosToReplace)
+        {
+            if (info.renderer != null)
+            {
+                Material[] materials = info.renderer.sharedMaterials;
+                if (info.materialIndex < materials.Length)
                 {
-                    if (materials[i] == oldMaterial)
-                    {
-                        materials[i] = newMaterial;
-                    }
+                    materials[info.materialIndex] = newMaterial;
                 }
-                renderer.sharedMaterials = materials;
+                info.renderer.sharedMaterials = materials;
+                
+                // 标记为已修改
+                EditorUtility.SetDirty(info.renderer);
+                
+                // 如果是预制体实例，记录修改
+                if (PrefabUtility.IsPartOfAnyPrefab(info.renderer))
+                {
+                    PrefabUtility.RecordPrefabInstancePropertyModifications(info.renderer);
+                }
             }
         }
-
-        Undo.RegisterCompleteObjectUndo(affectedObjects.ToArray(), 
-            $"材质替换: {oldMaterial.name} -> {(newMaterial == null ? "空" : newMaterial.name)}");
+        
+        // 不刷新列表，只重绘当前行
+        // 这样可以保持列表顺序不变
     }
 
     private void SelectObjectsWithMaterial(Material material)
     {
         if (material == null || !materialMap.ContainsKey(material)) return;
 
-        Selection.objects = materialMap[material].Where(obj => obj != null).ToArray();
+        List<GameObject> validObjects = new List<GameObject>();
+        foreach (MaterialInfo info in materialMap[material])
+        {
+            if (info.gameObject != null && !validObjects.Contains(info.gameObject))
+            {
+                validObjects.Add(info.gameObject);
+            }
+        }
+        
+        Selection.objects = validObjects.ToArray();
+    }
+
+    private class MaterialInfo
+    {
+        public GameObject gameObject;
+        public Renderer renderer;
+        public int materialIndex;
+        public Material originalMaterial; // 原始材质
     }
 }
