@@ -9,6 +9,10 @@ public class MaterialManager : EditorWindow
     private Dictionary<Material, List<MaterialInfo>> materialMap;
     private List<Material> uniqueMaterials;
     
+    // 添加锁定状态变量
+    private bool isLocked = false;
+    private string lockButtonText = "锁定";
+    
     [MenuItem("Tools/材质管理器")]
     public static void ShowWindow()
     {
@@ -22,8 +26,12 @@ public class MaterialManager : EditorWindow
 
     private void OnSelectionChange()
     {
-        RefreshMaterialList();
-        Repaint();
+        // 如果窗口被锁定，不刷新材质列表
+        if (!isLocked)
+        {
+            RefreshMaterialList();
+            Repaint();
+        }
     }
 
     private void RefreshMaterialList()
@@ -93,7 +101,52 @@ public class MaterialManager : EditorWindow
 
     private void OnGUI()
     {
+        // 添加锁定按钮
+        EditorGUILayout.BeginHorizontal(EditorStyles.toolbar);
+        {
+            GUILayout.FlexibleSpace();
+            
+            // 显示当前锁定状态
+            string statusText = isLocked ? "已锁定 (选择对象不会更新列表)" : "未锁定";
+            EditorGUILayout.LabelField(statusText, EditorStyles.miniLabel, GUILayout.Width(150));
+            
+            // 更新按钮文本
+            lockButtonText = isLocked ? "解锁" : "锁定";
+            
+            // 锁定/解锁按钮
+            if (GUILayout.Button(lockButtonText, EditorStyles.toolbarButton, GUILayout.Width(60)))
+            {
+                isLocked = !isLocked;
+                
+                // 如果解锁了，可以立即刷新一次列表
+                if (!isLocked)
+                {
+                    RefreshMaterialList();
+                }
+            }
+            
+            // 添加手动刷新按钮
+            if (GUILayout.Button("刷新", EditorStyles.toolbarButton, GUILayout.Width(60)))
+            {
+                RefreshMaterialList();
+            }
+        }
+        EditorGUILayout.EndHorizontal();
+        
+        // 显示锁定状态提示
+        if (isLocked)
+        {
+            EditorGUILayout.HelpBox("列表已锁定。选择新的对象不会更新此列表。点击'解锁'以恢复自动更新。", 
+                MessageType.Warning);
+        }
+        
         GUILayout.Label($"选中的对象: {Selection.gameObjects.Length} 个", EditorStyles.boldLabel);
+        
+        // 显示当前显示的材质数量
+        if (uniqueMaterials != null)
+        {
+            GUILayout.Label($"显示的材质: {uniqueMaterials.Count} 个", EditorStyles.miniBoldLabel);
+        }
         
         scrollPosition = EditorGUILayout.BeginScrollView(scrollPosition, 
             GUILayout.ExpandWidth(true), 
