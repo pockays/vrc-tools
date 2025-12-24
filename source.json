@@ -23,7 +23,19 @@
         "suzuryg/face-emo",
         "whiteflare/AvatarTools",
         "VRLabs/Avatars-3.0-Manager",
-        "enitimeago/make-it-mmd"
+        "enitimeago/make-it-mmd",
+        "bdunderscore/modular-avatar",
+        "lilxyzw/lilEditorToolbox",
+        "lilxyzw/lilToon",
+        "poiyomi/PoiyomiToonShader",
+        "esperecyan/VRMConverterForVRChat",
+        "Narazaka/FloorAdjuster",
+        "lilxyzw/lilAvatarUtils",
+        "bdunderscore/ndmf",
+        "vrcd-community/vrchat-sdk-patcher",
+        "kurotu/VRCQuestTools",
+        "vrcyue/MeshUVCutTool",
+        "rrazgriz/RATS"
     ],
     "packages":[
         {
