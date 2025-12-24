@@ -1,48 +1,27 @@
 {
-    "name": "咩卡布",
-    "id": "com.vrchat.liurs-listing",
-    "url": "https://pockays.github.io/vrc-tools/index.json",
-    "author": {
-        "email": "developer@vrchat.com",
-        "name": "VRChat",
-        "url": "https://hello.vrchat.com"
+    "name":"Example Listing",
+    "id":"com.vrchat.example-listing",
+    "url":"https://vrchat-community.github.io/template-package-listing/index.json",
+    "author":{
+        "email":"developer@vrchat.com",
+        "name":"VRChat",
+        "url":"https://hello.vrchat.com"
     },
-    "description": "咩卡布的仓库",
-    "infoLink": {
-        "url": "http://github.com/pockays/vrc-tools",
-        "text": "View on GitHub"
+    "description":"Example listing of VRChat packages",
+    "infoLink":{
+        "url":"http://github.com/vrchat-community/template-package-listing",
+        "text":"View on GitHub"
     },
-    "bannerUrl": "banner.png",
-    "githubRepos": [
-        "pockays/vrc-tools",
-        "VRCFury/VRCFury",
-        "rurre/PumkinsAvatarTools",
-        "Tliks/ModuleCreator",
-        "Thryrallo/VRC-Avatar-Performance-Tools",
-        "anatawa12/AvatarOptimizer",
-        "suzuryg/face-emo",
-        "whiteflare/AvatarTools",
-        "VRLabs/Avatars-3.0-Manager",
-        "enitimeago/make-it-mmd",
-        "bdunderscore/modular-avatar",
-        "lilxyzw/lilEditorToolbox",
-        "lilxyzw/lilToon",
-        "poiyomi/PoiyomiToonShader",
-        "esperecyan/VRMConverterForVRChat",
-        "Narazaka/FloorAdjuster",
-        "nuomew/nuomewtoolbox-Parameter",
-        "lilxyzw/lilAvatarUtils",
-        "bdunderscore/ndmf",
-        "vrcd-community/vrchat-sdk-patcher",
-        "kurotu/VRCQuestTools",
-        "vrcyue/MeshUVCutTool",
-        "rrazgriz/RATS"
+    "bannerUrl":"banner.png",
+    "githubRepos":[
+        "vrchat-community/clientsim"
     ],
-    "packages": [
+    "packages":[
         {
-            "name": "com.vrchat.texture-color-adjuster",
-            "releases": [
-                "https://nekoare.github.io/texture-color-adjuster/dev.nekoare.tex-col-adjuster-v1.3.1.zip"
+            "name":"com.vrchat.udonsharp",
+            "releases":[
+                "https://github.com/vrchat-community/UdonSharp/releases/download/1.1.7/com.vrchat.UdonSharp.zip",
+                "https://github.com/vrchat-community/UdonSharp/releases/download/1.1.6/com.vrchat.UdonSharp-1.1.6.zip"
             ]
         }
     ]
