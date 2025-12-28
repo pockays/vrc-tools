@@ -47,6 +47,24 @@ public class VRCPhysBoneOrganizer : EditorWindow
             "当动骨在PB对象下或者骨骼中含有constrain组件时请不要使用",
             MessageType.Warning
         );
+
+        // ---------- 新增：右下角高亮署名 ----------
+        // 推动内容到窗口右下角（使用水平布局+弹性空间）
+        GUILayout.BeginHorizontal();
+        GUILayout.FlexibleSpace(); // 填充左侧空白，将署名推到右侧
+        
+        // 定义高亮样式
+        GUIStyle highlightStyle = new GUIStyle(EditorStyles.miniLabel)
+        {
+            normal = { textColor = Color.yellow }, // 高亮黄色文字
+            fontStyle = FontStyle.Bold, // 粗体增强高亮效果
+            alignment = TextAnchor.LowerRight // 右下对齐
+        };
+        
+        // 绘制署名文字
+        GUILayout.Label("闲鱼@咩卡布w  禁止转载", highlightStyle, GUILayout.ExpandWidth(false));
+        GUILayout.EndHorizontal();
+        // ------------------------------------------
     }
     
     private void ProcessSelectedObjects()
