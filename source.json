@@ -36,7 +36,8 @@
         "kurotu/VRCQuestTools",
         "vrcyue/MeshUVCutTool",
         "rrazgriz/RATS",
-        "Adjerry91/VRCFaceTracking-Templates"
+        "Adjerry91/VRCFaceTracking-Templates",
+        "anatawa12/ContinuousAvatarUploader"
     ],
     "packages":[
         {
