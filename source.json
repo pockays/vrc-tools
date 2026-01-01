@@ -37,7 +37,8 @@
         "vrcyue/MeshUVCutTool",
         "rrazgriz/RATS",
         "Adjerry91/VRCFaceTracking-Templates",
-        "anatawa12/ContinuousAvatarUploader"
+        "anatawa12/ContinuousAvatarUploader",
+        "AoiKamishiro/AssetsCompressor"
     ],
     "packages":[
         {
