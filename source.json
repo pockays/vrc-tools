@@ -14,31 +14,7 @@
     },
     "bannerUrl":"banner.png",
     "githubRepos":[
-        "AoiKamishiro/AssetsCompressor",
-        "pockays/vrc-tools",
-        "VRCFury/VRCFury",
-        "rurre/PumkinsAvatarTools",
-        "Tliks/ModuleCreator",
-        "Thryrallo/VRC-Avatar-Performance-Tools",
-        "anatawa12/AvatarOptimizer",
-        "suzuryg/face-emo",
-        "whiteflare/AvatarTools",
-        "VRLabs/Avatars-3.0-Manager",
-        "enitimeago/make-it-mmd",
-        "bdunderscore/modular-avatar",
-        "lilxyzw/lilEditorToolbox",
-        "lilxyzw/lilToon",
-        "poiyomi/PoiyomiToonShader",
-        "esperecyan/VRMConverterForVRChat",
-        "Narazaka/FloorAdjuster",
-        "lilxyzw/lilAvatarUtils",
-        "bdunderscore/ndmf",
-        "vrcd-community/vrchat-sdk-patcher",
-        "kurotu/VRCQuestTools",
-        "vrcyue/MeshUVCutTool",
-        "rrazgriz/RATS",
-        "Adjerry91/VRCFaceTracking-Templates",
-        "anatawa12/ContinuousAvatarUploader"
+        "AoiKamishiro/AssetsCompressor"
     ],
     "packages":[
         {
