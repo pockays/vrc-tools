@@ -114,7 +114,7 @@ public class VRCPhysBoneOrganizer : EditorWindow
             
             if (objectsWithPhysBones.Count <= 1) continue;
             
-            // 按Phys Bone配置分组（考虑常数、曲线和引用的区别）
+            // 按Phys Bone配置分组（考虑Colliders的差异）
             var groupsByPhysBoneConfig = GroupByPhysBoneConfig(objectsWithPhysBones);
             
             // 处理每个配置组
@@ -202,8 +202,8 @@ public class VRCPhysBoneOrganizer : EditorWindow
             Component physBone = GetPhysBoneComponent(obj);
             if (physBone == null) continue;
             
-            // 获取配置哈希（考虑常数和曲线的区别）
-            string configHash = GetPhysBoneConfigHashIgnoringRoot(physBone);
+            // 获取配置哈希（包含Colliders信息）
+            string configHash = GetPhysBoneConfigHash(physBone);
             
             if (!groups.ContainsKey(configHash))
             {
@@ -253,6 +253,9 @@ public class VRCPhysBoneOrganizer : EditorWindow
             return false;
         }
         
+        // 收集所有Colliders并添加到父对象
+        CollectAndSetCollidersToParent(objects, newParent, templatePhysBone);
+        
         // 从所有子对象中移除Phys Bone组件
         int removedCount = 0;
         foreach (GameObject obj in objects)
@@ -293,7 +296,9 @@ public class VRCPhysBoneOrganizer : EditorWindow
             
             string typeName = component.GetType().Name;
             
-            if (typeName.Contains("PhysBone") || typeName.Contains("Phys_Bone"))
+            // 只匹配VRCPhysBone组件，不匹配Collider组件
+            if ((typeName.Contains("PhysBone") || typeName.Contains("Phys_Bone")) && 
+                !typeName.Contains("Collider"))
             {
                 return component;
             }
@@ -302,7 +307,7 @@ public class VRCPhysBoneOrganizer : EditorWindow
         return null;
     }
     
-    private string GetPhysBoneConfigHashIgnoringRoot(Component physBone)
+    private string GetPhysBoneConfigHash(Component physBone)
     {
         System.Text.StringBuilder sb = new System.Text.StringBuilder();
         System.Type type = physBone.GetType();
@@ -320,6 +325,17 @@ public class VRCPhysBoneOrganizer : EditorWindow
             f.GetCustomAttribute<SerializeField>() != null
         ).OrderBy(f => f.Name).ToArray();
         
+        // 首先检查是否有Colliders字段
+        FieldInfo collidersField = serializableFields.FirstOrDefault(f => 
+            f.Name.ToLower().Contains("colliders") || f.Name.ToLower().Contains("collider"));
+            
+        if (collidersField != null)
+        {
+            object collidersValue = collidersField.GetValue(physBone);
+            string collidersHash = GetCollidersHash(collidersValue);
+            sb.Append($"Colliders:{collidersHash}|");
+        }
+        
         foreach (FieldInfo field in serializableFields)
         {
             string fieldName = field.Name.ToLower();
@@ -330,6 +346,10 @@ public class VRCPhysBoneOrganizer : EditorWindow
                 
             // 跳过其他transform相关字段
             if (fieldName.Contains("transform") && field.FieldType == typeof(Transform))
+                continue;
+            
+            // 跳过已经处理过的colliders字段
+            if (fieldName.Contains("colliders") || fieldName.Contains("collider"))
                 continue;
             
             try
@@ -368,6 +388,50 @@ public class VRCPhysBoneOrganizer : EditorWindow
         return sb.ToString();
     }
     
+    private string GetCollidersHash(object collidersValue)
+    {
+        if (collidersValue == null) return "null";
+        
+        // 尝试获取colliders的数量信息
+        System.Text.StringBuilder sb = new System.Text.StringBuilder();
+        
+        // 尝试反射获取colliders列表
+        try
+        {
+            var collidersList = collidersValue as System.Collections.IEnumerable;
+            if (collidersList != null)
+            {
+                int count = 0;
+                foreach (var collider in collidersList)
+                {
+                    if (collider != null)
+                    {
+                        count++;
+                        // 添加collider的基本信息
+                        sb.Append(GetColliderInfo(collider));
+                    }
+                }
+                return $"Count:{count}|Items:{sb}";
+            }
+        }
+        catch { }
+        
+        return collidersValue.ToString();
+    }
+    
+    private string GetColliderInfo(object collider)
+    {
+        if (collider == null) return "null";
+        
+        // 获取collider的引用信息
+        if (collider is UnityEngine.Object unityObj)
+        {
+            return $"[{unityObj.GetInstanceID()}:{unityObj.name}]";
+        }
+        
+        return collider.ToString();
+    }
+    
     private string GetSimpleCurveHash(AnimationCurve curve)
     {
         if (curve == null || curve.keys == null || curve.keys.Length == 0)
@@ -398,6 +462,9 @@ public class VRCPhysBoneOrganizer : EditorWindow
             Component newComponent = parentObject.AddComponent(componentType);
             EditorUtility.CopySerialized(sourceComponent, newComponent);
             
+            // 清空父对象的Colliders
+            ClearCollidersInParent(newComponent);
+            
             SetRootTransformToNull(newComponent);
             
             return true;
@@ -414,6 +481,196 @@ public class VRCPhysBoneOrganizer : EditorWindow
             {
                 Debug.LogError($"备份方法也失败: {e2.Message}");
                 return false;
+            }
+        }
+    }
+    
+    private void ClearCollidersInParent(Component physBone)
+    {
+        System.Type type = physBone.GetType();
+        
+        // 查找colliders字段
+        FieldInfo[] fields = type.GetFields(
+            BindingFlags.Public | 
+            BindingFlags.NonPublic | 
+            BindingFlags.Instance
+        );
+        
+        foreach (FieldInfo field in fields)
+        {
+            string fieldName = field.Name.ToLower();
+            if (fieldName.Contains("colliders") || fieldName.Contains("collider"))
+            {
+                try
+                {
+                    // 尝试获取当前值
+                    object currentValue = field.GetValue(physBone);
+                    
+                    // 尝试创建一个空列表或数组
+                    if (field.FieldType.IsGenericType && 
+                        field.FieldType.GetGenericTypeDefinition() == typeof(List<>))
+                    {
+                        var emptyList = System.Activator.CreateInstance(field.FieldType);
+                        field.SetValue(physBone, emptyList);
+                        Debug.Log($"已清空colliders列表");
+                        EditorUtility.SetDirty(physBone.gameObject);
+                    }
+                    else if (field.FieldType.IsArray)
+                    {
+                        var elementType = field.FieldType.GetElementType();
+                        var emptyArray = System.Array.CreateInstance(elementType, 0);
+                        field.SetValue(physBone, emptyArray);
+                        Debug.Log($"已清空colliders数组");
+                        EditorUtility.SetDirty(physBone.gameObject);
+                    }
+                    else
+                    {
+                        field.SetValue(physBone, null);
+                        Debug.Log($"已将colliders字段设置为null");
+                        EditorUtility.SetDirty(physBone.gameObject);
+                    }
+                    break;
+                }
+                catch (System.Exception e)
+                {
+                    Debug.LogWarning($"无法清空colliders字段: {e.Message}");
+                }
+            }
+        }
+    }
+    
+    private void CollectAndSetCollidersToParent(List<GameObject> objects, GameObject parentObject, Component templatePhysBone)
+    {
+        System.Type physBoneType = templatePhysBone.GetType();
+        
+        // 查找colliders字段
+        FieldInfo collidersField = null;
+        PropertyInfo collidersProperty = null;
+        
+        FieldInfo[] fields = physBoneType.GetFields(
+            BindingFlags.Public | 
+            BindingFlags.NonPublic | 
+            BindingFlags.Instance
+        );
+        
+        foreach (FieldInfo field in fields)
+        {
+            string fieldName = field.Name.ToLower();
+            if (fieldName.Contains("colliders") || fieldName.Contains("collider"))
+            {
+                collidersField = field;
+                break;
+            }
+        }
+        
+        if (collidersField == null)
+        {
+            PropertyInfo[] properties = physBoneType.GetProperties(
+                BindingFlags.Public | 
+                BindingFlags.Instance
+            );
+            
+            foreach (PropertyInfo property in properties)
+            {
+                string propertyName = property.Name.ToLower();
+                if (propertyName.Contains("colliders") || propertyName.Contains("collider"))
+                {
+                    collidersProperty = property;
+                    break;
+                }
+            }
+        }
+        
+        if (collidersField == null && collidersProperty == null)
+        {
+            Debug.LogWarning("未找到colliders字段或属性");
+            return;
+        }
+        
+        // 收集所有colliders
+        HashSet<UnityEngine.Object> allColliders = new HashSet<UnityEngine.Object>();
+        
+        foreach (GameObject obj in objects)
+        {
+            Component physBone = GetPhysBoneComponent(obj);
+            if (physBone != null)
+            {
+                object collidersValue = null;
+                if (collidersField != null)
+                {
+                    collidersValue = collidersField.GetValue(physBone);
+                }
+                else if (collidersProperty != null && collidersProperty.CanRead)
+                {
+                    collidersValue = collidersProperty.GetValue(physBone);
+                }
+                
+                if (collidersValue != null)
+                {
+                    // 尝试作为集合处理
+                    var collidersEnumerable = collidersValue as System.Collections.IEnumerable;
+                    if (collidersEnumerable != null)
+                    {
+                        foreach (var collider in collidersEnumerable)
+                        {
+                            if (collider is UnityEngine.Object unityCollider && unityCollider != null)
+                            {
+                                allColliders.Add(unityCollider);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        
+        // 设置到父对象的PhysBone
+        Component parentPhysBone = GetPhysBoneComponent(parentObject);
+        if (parentPhysBone != null && allColliders.Count > 0)
+        {
+            try
+            {
+                // 根据字段类型创建相应的集合
+                if (collidersField != null)
+                {
+                    object colliderCollection;
+                    Type fieldType = collidersField.FieldType;
+                    
+                    if (fieldType.IsGenericType && fieldType.GetGenericTypeDefinition() == typeof(List<>))
+                    {
+                        Type elementType = fieldType.GetGenericArguments()[0];
+                        colliderCollection = System.Activator.CreateInstance(typeof(List<>).MakeGenericType(elementType));
+                        var addMethod = colliderCollection.GetType().GetMethod("Add");
+                        
+                        foreach (var collider in allColliders)
+                        {
+                            addMethod.Invoke(colliderCollection, new object[] { collider });
+                        }
+                    }
+                    else if (fieldType.IsArray)
+                    {
+                        Type elementType = fieldType.GetElementType();
+                        var array = Array.CreateInstance(elementType, allColliders.Count);
+                        int index = 0;
+                        foreach (var collider in allColliders)
+                        {
+                            array.SetValue(collider, index++);
+                        }
+                        colliderCollection = array;
+                    }
+                    else
+                    {
+                        Debug.LogWarning($"不支持的colliders字段类型: {fieldType}");
+                        return;
+                    }
+                    
+                    collidersField.SetValue(parentPhysBone, colliderCollection);
+                    Debug.Log($"已设置 {allColliders.Count} 个colliders到父对象");
+                    EditorUtility.SetDirty(parentObject);
+                }
+            }
+            catch (System.Exception e)
+            {
+                Debug.LogError($"设置colliders失败: {e.Message}");
             }
         }
     }
@@ -444,6 +701,7 @@ public class VRCPhysBoneOrganizer : EditorWindow
         
         targetSO.ApplyModifiedProperties();
         
+        ClearCollidersInParent(newComponent);
         SetRootTransformToNull(newComponent);
         
         return true;
