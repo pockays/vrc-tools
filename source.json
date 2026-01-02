@@ -14,6 +14,7 @@
     },
     "bannerUrl":"banner.png",
     "githubRepos":[
+        "AoiKamishiro/AssetsCompressor",
         "pockays/vrc-tools",
         "VRCFury/VRCFury",
         "rurre/PumkinsAvatarTools",
@@ -37,8 +38,7 @@
         "vrcyue/MeshUVCutTool",
         "rrazgriz/RATS",
         "Adjerry91/VRCFaceTracking-Templates",
-        "anatawa12/ContinuousAvatarUploader",
-        "AoiKamishiro/AssetsCompressor"
+        "anatawa12/ContinuousAvatarUploader"
     ],
     "packages":[
         {
