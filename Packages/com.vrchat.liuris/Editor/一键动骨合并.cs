@@ -2,6 +2,8 @@ using UnityEngine;
 using System.Collections.Generic;
 using System.Reflection;
 using System.Linq;
+using System;
+
 #if UNITY_EDITOR
 using UnityEditor;
 #endif
@@ -296,11 +298,22 @@ public class VRCPhysBoneOrganizer : EditorWindow
             
             string typeName = component.GetType().Name;
             
-            // 只匹配VRCPhysBone组件，不匹配Collider组件
-            if ((typeName.Contains("PhysBone") || typeName.Contains("Phys_Bone")) && 
-                !typeName.Contains("Collider"))
+            // 更精确地匹配VRCPhysBone组件
+            // 1. 必须包含"PhysBone"或"Phys_Bone"
+            // 2. 绝对不能包含"Collider"
+            if ((typeName.Contains("PhysBone") || typeName.Contains("Phys_Bone")))
             {
-                return component;
+                // 检查是否不是Collider组件
+                if (!typeName.Contains("Collider"))
+                {
+                    return component;
+                }
+                else
+                {
+                    // 检查是否是特殊的组合情况，如"VRCPhysBoneCollider"
+                    // 如果是这种类型，应该跳过
+                    continue;
+                }
             }
         }
         
