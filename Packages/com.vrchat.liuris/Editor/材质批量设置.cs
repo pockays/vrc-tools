@@ -37,6 +37,11 @@ public class LilToonBatchMaterialEditor : EditorWindow
     private bool dissolveHDR = true;
     private string dissolveColorHex = "EFFEFF";
     
+    // 窗口锁定状态
+    private bool isWindowLocked = false;
+    private Texture2D lockIcon;
+    private Texture2D unlockIcon;
+    
     // lilToon 属性配置
     private class LilProperty
     {
@@ -61,11 +66,30 @@ public class LilToonBatchMaterialEditor : EditorWindow
     private void OnEnable()
     {
         InitializePropertyCategories();
+        LoadIcons();
         RefreshSelection();
+    }
+
+    private void LoadIcons()
+    {
+        // 加载锁定和解锁图标
+        lockIcon = EditorGUIUtility.IconContent("LockIcon-On").image as Texture2D;
+        unlockIcon = EditorGUIUtility.IconContent("LockIcon").image as Texture2D;
+        
+        // 如果内置图标不可用，使用备用方案
+        if (lockIcon == null)
+        {
+            // 可以创建简单的纹理作为备用
+            lockIcon = new Texture2D(16, 16);
+            unlockIcon = new Texture2D(16, 16);
+        }
     }
 
     private void OnSelectionChange()
     {
+        // 如果窗口被锁定，不响应选择变化
+        if (isWindowLocked) return;
+        
         RefreshSelection();
         Repaint();
     }
@@ -97,6 +121,9 @@ public class LilToonBatchMaterialEditor : EditorWindow
 
     private void RefreshSelection()
     {
+        // 如果窗口被锁定，不刷新选择
+        if (isWindowLocked) return;
+        
         selectedMaterials.Clear();
         materialSelection.Clear();
         propertySelection.Clear();
@@ -189,7 +216,7 @@ public class LilToonBatchMaterialEditor : EditorWindow
             // 判断是否是渲染设置
             property.isRenderSetting = property.name.Contains("Blend") || 
                                       property.name.Contains("Src") || 
-                                      property.name.Contains("Dst") ||
+                                      propertyName.Contains("Dst") ||
                                       property.name == "_ZWrite" || 
                                       property.name == "_ZTest" ||
                                       property.name == "_Cull";
@@ -447,12 +474,8 @@ private void EnsureAllDissolvePropertiesExist(Material material)
     {
         EditorGUILayout.BeginVertical();
         
-        // 标题
-        EditorGUILayout.LabelField("lilToon 批量材质编辑器", EditorStyles.boldLabel);
-        EditorGUILayout.Space();
-        
-        // 撤回/重做按钮
-        DrawUndoRedoControls();
+        // 标题栏
+        DrawTitleBar();
         
         scrollPosition = EditorGUILayout.BeginScrollView(scrollPosition);
         
@@ -474,6 +497,64 @@ private void EnsureAllDissolvePropertiesExist(Material material)
         DrawActionButtons();
         
         EditorGUILayout.EndVertical();
+    }
+
+    private void DrawTitleBar()
+    {
+        EditorGUILayout.BeginHorizontal(EditorStyles.toolbar);
+        
+        // 标题
+        GUILayout.Label("lilToon 批量材质编辑器", EditorStyles.boldLabel);
+        
+        GUILayout.FlexibleSpace();
+        
+        // 窗口锁定按钮
+        DrawWindowLockButton();
+        
+        EditorGUILayout.EndHorizontal();
+        
+        EditorGUILayout.Space();
+        
+        // 撤回/重做按钮
+        DrawUndoRedoControls();
+    }
+
+    private void DrawWindowLockButton()
+    {
+        // 锁定按钮
+        Texture2D currentIcon = isWindowLocked ? lockIcon : unlockIcon;
+        string tooltip = isWindowLocked ? "窗口已锁定 - 选择变化不会影响当前内容\n点击解锁" : "窗口未锁定 - 选择变化会自动刷新\n点击锁定";
+        
+        GUIContent lockContent = new GUIContent(
+            currentIcon,
+            tooltip
+        );
+        
+        Color originalColor = GUI.color;
+        if (isWindowLocked)
+        {
+            GUI.color = Color.yellow;
+        }
+        
+        if (GUILayout.Button(lockContent, EditorStyles.toolbarButton, GUILayout.Width(30)))
+        {
+            isWindowLocked = !isWindowLocked;
+            
+            if (!isWindowLocked)
+            {
+                // 如果解锁了窗口，自动刷新选择
+                RefreshSelection();
+            }
+            
+            // 显示状态提示
+            string status = isWindowLocked ? "窗口已锁定" : "窗口已解锁";
+            ShowNotification(new GUIContent(status));
+        }
+        
+        GUI.color = originalColor;
+        
+        // 显示锁定状态文字提示
+        GUILayout.Label(isWindowLocked ? "已锁定" : "未锁定", EditorStyles.miniLabel, GUILayout.Width(40));
     }
 
     private void DrawUndoRedoControls()
@@ -540,6 +621,12 @@ private void EnsureAllDissolvePropertiesExist(Material material)
         {
             EditorGUILayout.HelpBox("请选择包含 lilToon 材质的对象", MessageType.Info);
             return;
+        }
+
+        // 显示锁定状态提示
+        if (isWindowLocked)
+        {
+            EditorGUILayout.HelpBox("窗口已锁定 - 当前显示的是之前选择的内容\n点击标题栏的锁定按钮解锁", MessageType.Warning);
         }
 
         // 全选/全不选
