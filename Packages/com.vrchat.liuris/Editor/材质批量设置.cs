@@ -216,7 +216,7 @@ public class LilToonBatchMaterialEditor : EditorWindow
             // 判断是否是渲染设置
             property.isRenderSetting = property.name.Contains("Blend") || 
                                       property.name.Contains("Src") || 
-                                      propertyName.Contains("Dst") ||
+                                      property.name.Contains("Dst") ||
                                       property.name == "_ZWrite" || 
                                       property.name == "_ZTest" ||
                                       property.name == "_Cull";

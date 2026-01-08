@@ -130,6 +130,12 @@ public class MaterialManager : EditorWindow
             {
                 RefreshMaterialList();
             }
+            
+            // 添加选中所有材质的按钮
+            if (GUILayout.Button("选中所有材质", EditorStyles.toolbarButton, GUILayout.Width(100)))
+            {
+                SelectAllMaterials();
+            }
         }
         EditorGUILayout.EndHorizontal();
         
@@ -169,6 +175,29 @@ public class MaterialManager : EditorWindow
         }
         
         EditorGUILayout.EndScrollView();
+    }
+
+    private void SelectAllMaterials()
+    {
+        if (uniqueMaterials == null || uniqueMaterials.Count == 0)
+        {
+            Debug.LogWarning("没有可选择的材质");
+            return;
+        }
+        
+        // 过滤掉null材质
+        List<Material> validMaterials = uniqueMaterials.Where(m => m != null).ToList();
+        
+        if (validMaterials.Count == 0)
+        {
+            Debug.LogWarning("没有有效的材质可供选择");
+            return;
+        }
+        
+        // 设置选择
+        Selection.objects = validMaterials.ToArray();
+        
+        Debug.Log($"已选择 {validMaterials.Count} 个材质球");
     }
 
     private void DrawMaterialRow(Material originalMaterial)
