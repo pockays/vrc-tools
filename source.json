@@ -38,7 +38,8 @@
         "rrazgriz/RATS",
         "Adjerry91/VRCFaceTracking-Templates",
         "anatawa12/ContinuousAvatarUploader",
-        "Limitex/avatar-compressor"
+        "Limitex/avatar-compressor",
+        "lyuma/Av3Emulator"
     ],
     "packages":[
         {
