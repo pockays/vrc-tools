@@ -3,6 +3,9 @@ using System.Collections.Generic;
 using System.Reflection;
 using System.Linq;
 using System;
+using UnityEditorInternal;
+
+
 
 #if UNITY_EDITOR
 using UnityEditor;
@@ -30,6 +33,13 @@ public class VRCPhysBoneOrganizer : EditorWindow
         if (GUILayout.Button("合并选中的Phys Bones", GUILayout.Height(40)))
         {
             ProcessSelectedObjects();
+        }
+        
+        // 新增的移动功能按键
+        EditorGUILayout.Space();
+        if (GUILayout.Button("移动PhysBones到Root", GUILayout.Height(40)))
+        {
+            MovePhysBonesToRoot();
         }
         
         EditorGUILayout.Space();
@@ -69,6 +79,101 @@ public class VRCPhysBoneOrganizer : EditorWindow
         // ------------------------------------------
     }
     
+    // 新增的移动功能方法
+    private void MovePhysBonesToRoot()
+    {
+        if (Selection.activeGameObject == null)
+        {
+            EditorUtility.DisplayDialog("错误", "请先选中一个GameObject", "确定");
+            return;
+        }
+
+        GameObject selectedObject = Selection.activeGameObject;
+        var allObjects = GetAllObjectsInHierarchy(selectedObject);
+        int movedCount = 0;
+        int totalCount = 0;
+
+        // 先处理所有PhysBone组件
+        foreach (var obj in allObjects)
+        {
+            var physBone = GetPhysBoneComponent(obj);
+            if (physBone != null)
+            {
+                totalCount++;
+                
+                // 尝试获取rootTransform字段
+                var rootTransform = GetRootTransformField(physBone);
+                if (rootTransform != null && rootTransform != obj.transform)
+                {
+                    ComponentUtility.CopyComponent(physBone);
+                    ComponentUtility.PasteComponentAsNew(rootTransform.gameObject);
+                    Undo.DestroyObjectImmediate(physBone);
+                    movedCount++;
+                }
+            }
+        }
+
+        // 处理完成后删除整个选中的对象及其子对象
+        if (movedCount > 0)
+        {
+            Undo.DestroyObjectImmediate(selectedObject);
+            statusText = $"移动完成: {movedCount}/{totalCount} 个PhysBone已移动，已删除选中的对象及其子对象";
+            Debug.Log(statusText);
+            EditorUtility.DisplayDialog("完成", 
+                $"总PhysBones数: {totalCount}\n已移动: {movedCount}\n已删除选中的对象及其子对象", 
+                "确定");
+        }
+        else
+        {
+            statusText = "未找到可移动的PhysBone组件";
+            EditorUtility.DisplayDialog("提示", "未找到可移动的PhysBone组件", "确定");
+        }
+        
+        Repaint();
+    }
+    
+    // 辅助方法：获取PhysBone的rootTransform字段
+    private Transform GetRootTransformField(Component physBone)
+    {
+        if (physBone == null) return null;
+        
+        System.Type type = physBone.GetType();
+        FieldInfo[] fields = type.GetFields(
+            BindingFlags.Public | 
+            BindingFlags.NonPublic | 
+            BindingFlags.Instance
+        );
+        
+        foreach (FieldInfo field in fields)
+        {
+            string fieldName = field.Name.ToLower();
+            if ((fieldName.Contains("root") && field.FieldType == typeof(Transform)) ||
+                (fieldName.Contains("roottransform") && field.FieldType == typeof(Transform)))
+            {
+                try
+                {
+                    return (Transform)field.GetValue(physBone);
+                }
+                catch
+                {
+                    return null;
+                }
+            }
+        }
+        
+        return null;
+    }
+    
+    // 辅助方法：获取对象层级中的所有对象
+    private static List<GameObject> GetAllObjectsInHierarchy(GameObject parent)
+    {
+        var objects = new List<GameObject> { parent };
+        foreach (Transform child in parent.transform)
+            objects.AddRange(GetAllObjectsInHierarchy(child.gameObject));
+        return objects;
+    }
+    
+    // 以下是您的原有代码，完全保持不变
     private void ProcessSelectedObjects()
     {
         List<GameObject> selectedObjects = new List<GameObject>();
