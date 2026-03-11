@@ -15,7 +15,6 @@
     "bannerUrl":"banner.png",
     "githubRepos":[
         "pockays/vrc-tools",
-        "VRCFury/VRCFury",
         "rurre/PumkinsAvatarTools",
         "Tliks/ModuleCreator",
         "Thryrallo/VRC-Avatar-Performance-Tools",
@@ -40,7 +39,10 @@
         "anatawa12/ContinuousAvatarUploader",
         "Limitex/avatar-compressor",
         "lyuma/Av3Emulator",
-        "solaier111/VRchat-Eye-Change-Tools"
+        "solaier111/VRchat-Eye-Change-Tools",
+        "UnisakiStudio/KawaiiPosing",
+        "VRCFury/VRCFury",
+        "nekoare/chimera-hair-master"
     ],
     "packages":[
         {
