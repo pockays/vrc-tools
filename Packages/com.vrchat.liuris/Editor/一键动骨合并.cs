@@ -56,7 +56,8 @@ public class VRCPhysBoneOrganizer : EditorWindow
             "！！！！！注意！！！！！\n" +
             "注意备份文件\n" +
             "合并前请先完全解压对象\n" +
-            "当动骨在PB对象下或者骨骼中含有constrain组件时请不要使用",
+            "当骨骼中含有constrain类组件时请谨慎使用\n"+
+            "当动骨都处于PB对象下时，请先对PB对象点击“移动phybones到root”，再点击衣服进行合并",
             MessageType.Warning
         );
 
