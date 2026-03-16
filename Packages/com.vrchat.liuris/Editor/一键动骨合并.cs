@@ -80,59 +80,91 @@ public class VRCPhysBoneOrganizer : EditorWindow
         // ------------------------------------------
     }
     
-    // 新增的移动功能方法
-    private void MovePhysBonesToRoot()
+private void MovePhysBonesToRoot()
+{
+    if (Selection.activeGameObject == null)
     {
-        if (Selection.activeGameObject == null)
-        {
-            EditorUtility.DisplayDialog("错误", "请先选中一个GameObject", "确定");
-            return;
-        }
+        EditorUtility.DisplayDialog("错误", "请先选中一个GameObject", "确定");
+        return;
+    }
 
-        GameObject selectedObject = Selection.activeGameObject;
-        var allObjects = GetAllObjectsInHierarchy(selectedObject);
-        int movedCount = 0;
-        int totalCount = 0;
+    GameObject selectedObject = Selection.activeGameObject;
+    var allObjects = GetAllObjectsInHierarchy(selectedObject);
+    int movedCount = 0;
+    int totalCount = 0;
+    List<Component> allPhysBones = new List<Component>();
 
-        // 先处理所有PhysBone组件
-        foreach (var obj in allObjects)
-        {
-            var physBone = GetPhysBoneComponent(obj);
-            if (physBone != null)
-            {
-                totalCount++;
-                
-                // 尝试获取rootTransform字段
-                var rootTransform = GetRootTransformField(physBone);
-                if (rootTransform != null && rootTransform != obj.transform)
-                {
-                    ComponentUtility.CopyComponent(physBone);
-                    ComponentUtility.PasteComponentAsNew(rootTransform.gameObject);
-                    Undo.DestroyObjectImmediate(physBone);
-                    movedCount++;
-                }
-            }
-        }
+    // 第一步：收集所有PhysBone组件（每个对象可能有多个）
+    foreach (var obj in allObjects)
+    {
+        var physBones = GetAllPhysBoneComponents(obj);
+        allPhysBones.AddRange(physBones);
+        totalCount += physBones.Length;
+    }
 
-        // 处理完成后删除整个选中的对象及其子对象
-        if (movedCount > 0)
+
+
+    // 第二步：处理所有收集到的PhysBone组件
+    foreach (var physBone in allPhysBones)
+    {
+        // 获取rootTransform字段
+        var rootTransform = GetRootTransformField(physBone);
+        if (rootTransform != null && rootTransform != physBone.gameObject.transform)
         {
-            Undo.DestroyObjectImmediate(selectedObject);
-            statusText = $"移动完成: {movedCount}/{totalCount} 个PhysBone已移动，已删除选中的对象及其子对象";
-            Debug.Log(statusText);
-            EditorUtility.DisplayDialog("完成", 
-                $"总PhysBones数: {totalCount}\n已移动: {movedCount}\n已删除选中的对象及其子对象", 
-                "确定");
+            // 复制组件到root对象
+            ComponentUtility.CopyComponent(physBone);
+            ComponentUtility.PasteComponentAsNew(rootTransform.gameObject);
+            
+            // 标记原组件为待删除
+            Undo.DestroyObjectImmediate(physBone);
+            movedCount++;
         }
-        else
-        {
-            statusText = "未找到可移动的PhysBone组件";
-            EditorUtility.DisplayDialog("提示", "未找到可移动的PhysBone组件", "确定");
-        }
-        
-        Repaint();
+    }
+
+    // 第三步：处理完成后删除整个选中的对象及其子对象（但只在成功移动了组件后才执行）
+    if (movedCount > 0)
+    {
+        Undo.DestroyObjectImmediate(selectedObject);
+        statusText = $"移动完成: {movedCount}/{totalCount} 个PhysBone已移动，已删除选中的对象及其子对象";
+        Debug.Log(statusText);
+        EditorUtility.DisplayDialog("完成", 
+            $"总PhysBones数: {totalCount}\n已移动: {movedCount}\n已删除选中的对象及其子对象", 
+            "确定");
+    }
+    else
+    {
+        statusText = "未找到可移动的PhysBone组件";
+        EditorUtility.DisplayDialog("提示", "未找到可移动的PhysBone组件", "确定");
     }
     
+    Repaint();
+}
+
+// 新增辅助方法：获取对象上的所有PhysBone组件
+private Component[] GetAllPhysBoneComponents(GameObject obj)
+{
+    if (obj == null) return new Component[0];
+    
+    Component[] allComponents = obj.GetComponents<Component>();
+    List<Component> physBones = new List<Component>();
+    
+    foreach (Component component in allComponents)
+    {
+        if (component == null) continue;
+        
+        string typeName = component.GetType().Name;
+        
+        // 匹配VRCPhysBone组件（不包括Collider）
+        if ((typeName.Contains("PhysBone") || typeName.Contains("Phys_Bone")) && 
+            !typeName.Contains("Collider"))
+        {
+            physBones.Add(component);
+        }
+    }
+    
+    return physBones.ToArray();
+}
+
     // 辅助方法：获取PhysBone的rootTransform字段
     private Transform GetRootTransformField(Component physBone)
     {
@@ -392,39 +424,13 @@ public class VRCPhysBoneOrganizer : EditorWindow
         return true;
     }
     
-    private Component GetPhysBoneComponent(GameObject obj)
-    {
-        if (obj == null) return null;
-        
-        Component[] components = obj.GetComponents<Component>();
-        
-        foreach (Component component in components)
-        {
-            if (component == null) continue;
-            
-            string typeName = component.GetType().Name;
-            
-            // 更精确地匹配VRCPhysBone组件
-            // 1. 必须包含"PhysBone"或"Phys_Bone"
-            // 2. 绝对不能包含"Collider"
-            if ((typeName.Contains("PhysBone") || typeName.Contains("Phys_Bone")))
-            {
-                // 检查是否不是Collider组件
-                if (!typeName.Contains("Collider"))
-                {
-                    return component;
-                }
-                else
-                {
-                    // 检查是否是特殊的组合情况，如"VRCPhysBoneCollider"
-                    // 如果是这种类型，应该跳过
-                    continue;
-                }
-            }
-        }
-        
-        return null;
-    }
+private Component GetPhysBoneComponent(GameObject obj)
+{
+    if (obj == null) return null;
+    
+    var allPhysBones = GetAllPhysBoneComponents(obj);
+    return allPhysBones.Length > 0 ? allPhysBones[0] : null;
+}
     
     private string GetPhysBoneConfigHash(Component physBone)
     {
