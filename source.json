@@ -45,7 +45,8 @@
         "nekoare/chimera-hair-master",
         "RamType0/Meshia.MeshSimplification",
         "anatawa12/CustomLocalization4EditorExtension",
-        "project-vrcz/content-publisher"
+        "project-vrcz/content-publisher",
+        "VRLabs/Dynamic-Bones-Stub"
     ],
     "packages":[
         {
