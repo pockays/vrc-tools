@@ -90,19 +90,23 @@ private void MovePhysBonesToRoot()
 
     GameObject selectedObject = Selection.activeGameObject;
     var allObjects = GetAllObjectsInHierarchy(selectedObject);
-    int movedCount = 0;
-    int totalCount = 0;
+    int movedPhysBonesCount = 0;
+    int movedCollidersCount = 0;
+    int totalPhysBonesCount = 0;
+    int totalCollidersCount = 0;
     List<Component> allPhysBones = new List<Component>();
+    List<Component> allColliders = new List<Component>();
 
-    // 第一步：收集所有PhysBone组件（每个对象可能有多个）
+    // 第一步：收集所有PhysBone和PhysBoneCollider组件
     foreach (var obj in allObjects)
     {
         var physBones = GetAllPhysBoneComponents(obj);
+        var colliders = GetAllPhysBoneColliderComponents(obj);
         allPhysBones.AddRange(physBones);
-        totalCount += physBones.Length;
+        allColliders.AddRange(colliders);
+        totalPhysBonesCount += physBones.Length;
+        totalCollidersCount += colliders.Length;
     }
-
-
 
     // 第二步：处理所有收集到的PhysBone组件
     foreach (var physBone in allPhysBones)
@@ -117,27 +121,69 @@ private void MovePhysBonesToRoot()
             
             // 标记原组件为待删除
             Undo.DestroyObjectImmediate(physBone);
-            movedCount++;
+            movedPhysBonesCount++;
+        }
+    }
+    
+    // 第三步：处理所有收集到的PhysBoneCollider组件
+    foreach (var collider in allColliders)
+    {
+        // 获取rootTransform字段
+        var rootTransform = GetRootTransformField(collider);
+        if (rootTransform != null && rootTransform != collider.gameObject.transform)
+        {
+            // 复制组件到root对象
+            ComponentUtility.CopyComponent(collider);
+            ComponentUtility.PasteComponentAsNew(rootTransform.gameObject);
+            
+            // 标记原组件为待删除
+            Undo.DestroyObjectImmediate(collider);
+            movedCollidersCount++;
         }
     }
 
-    // 第三步：处理完成后删除整个选中的对象及其子对象（但只在成功移动了组件后才执行）
-    if (movedCount > 0)
+    // 第四步：处理完成后删除整个选中的对象及其子对象（但只在成功移动了组件后才执行）
+    int totalMoved = movedPhysBonesCount + movedCollidersCount;
+    if (totalMoved > 0)
     {
         Undo.DestroyObjectImmediate(selectedObject);
-        statusText = $"移动完成: {movedCount}/{totalCount} 个PhysBone已移动，已删除选中的对象及其子对象";
+        statusText = $"移动完成: PhysBone {movedPhysBonesCount}/{totalPhysBonesCount}, Collider {movedCollidersCount}/{totalCollidersCount}，已删除选中的对象及其子对象";
         Debug.Log(statusText);
         EditorUtility.DisplayDialog("完成", 
-            $"总PhysBones数: {totalCount}\n已移动: {movedCount}\n已删除选中的对象及其子对象", 
+            $"总PhysBones数: {totalPhysBonesCount}\n已移动PhysBones: {movedPhysBonesCount}\n总Colliders数: {totalCollidersCount}\n已移动Colliders: {movedCollidersCount}\n已删除选中的对象及其子对象", 
             "确定");
     }
     else
     {
-        statusText = "未找到可移动的PhysBone组件";
-        EditorUtility.DisplayDialog("提示", "未找到可移动的PhysBone组件", "确定");
+        statusText = "未找到可移动的PhysBone或PhysBoneCollider组件";
+        EditorUtility.DisplayDialog("提示", "未找到可移动的PhysBone或PhysBoneCollider组件", "确定");
     }
     
     Repaint();
+}
+
+// 新增辅助方法：获取对象上的所有PhysBoneCollider组件
+private Component[] GetAllPhysBoneColliderComponents(GameObject obj)
+{
+    if (obj == null) return new Component[0];
+    
+    Component[] allComponents = obj.GetComponents<Component>();
+    List<Component> colliders = new List<Component>();
+    
+    foreach (Component component in allComponents)
+    {
+        if (component == null) continue;
+        
+        string typeName = component.GetType().Name;
+        
+        // 匹配VRCPhysBoneCollider组件
+        if (typeName.Contains("Collider") || typeName.Contains("Phys_Bone_Collider"))
+        {
+            colliders.Add(component);
+        }
+    }
+    
+    return colliders.ToArray();
 }
 
 // 新增辅助方法：获取对象上的所有PhysBone组件
