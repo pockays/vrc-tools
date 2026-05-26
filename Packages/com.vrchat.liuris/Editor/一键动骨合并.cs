@@ -43,7 +43,19 @@ public class VRCPhysBoneOrganizer : EditorWindow
         }
         
         EditorGUILayout.Space();
-        
+        EditorGUILayout.BeginHorizontal();
+        if (GUILayout.Button("挂载PhysBone Optimizer", GUILayout.Height(36)))
+        {
+            AttachOptimizerToSelection();
+        }
+        if (GUILayout.Button("清除PhysBone Optimizer", GUILayout.Height(36)))
+        {
+            RemoveOptimizerFromSelection();
+        }
+        EditorGUILayout.EndHorizontal();
+
+        EditorGUILayout.Space();
+
         // 显示处理状态
         EditorGUILayout.LabelField("处理状态:", statusText);
         EditorGUILayout.LabelField("总处理组数:", totalProcessed.ToString());
@@ -159,6 +171,55 @@ private void MovePhysBonesToRoot()
         EditorUtility.DisplayDialog("提示", "未找到可移动的PhysBone或PhysBoneCollider组件", "确定");
     }
     
+    Repaint();
+}
+
+private void AttachOptimizerToSelection()
+{
+    var selected = Selection.gameObjects;
+    if (selected == null || selected.Length == 0)
+    {
+        EditorUtility.DisplayDialog("提示", "请先在Hierarchy中选中对象", "确定");
+        return;
+    }
+
+    int count = 0;
+    foreach (var go in selected)
+    {
+        if (go.GetComponent<VRCPhysBoneOptimizer>() == null)
+        {
+            Undo.AddComponent<VRCPhysBoneOptimizer>(go);
+            count++;
+        }
+    }
+
+    statusText = $"已挂载 PhysBone Optimizer 到 {count} 个对象";
+    Debug.Log(statusText);
+    Repaint();
+}
+
+private void RemoveOptimizerFromSelection()
+{
+    var selected = Selection.gameObjects;
+    if (selected == null || selected.Length == 0)
+    {
+        EditorUtility.DisplayDialog("提示", "请先在Hierarchy中选中对象", "确定");
+        return;
+    }
+
+    int count = 0;
+    foreach (var go in selected)
+    {
+        var comp = go.GetComponent<VRCPhysBoneOptimizer>();
+        if (comp != null)
+        {
+            Undo.DestroyObjectImmediate(comp);
+            count++;
+        }
+    }
+
+    statusText = $"已清除 {count} 个对象上的 PhysBone Optimizer";
+    Debug.Log(statusText);
     Repaint();
 }
 
