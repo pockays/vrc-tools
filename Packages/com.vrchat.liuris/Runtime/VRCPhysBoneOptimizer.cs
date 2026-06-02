@@ -1,8 +1,8 @@
 using UnityEngine;
+using System.Collections.Generic;
 #if UNITY_EDITOR
 using UnityEditor;
 using UnityEditorInternal;
-using System.Collections.Generic;
 #endif
 
 [AddComponentMenu("咩卡布/PhysBone Optimizer")]
