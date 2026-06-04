@@ -1,3 +1,6 @@
 {
-	"name": "donggu"
+    "name": "donggu",
+    "references": [
+        "nadena.dev.ndmf.runtime"
+    ]
 }
