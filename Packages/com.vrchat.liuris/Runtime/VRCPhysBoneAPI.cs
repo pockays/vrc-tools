@@ -69,8 +69,10 @@ public static class VRCPhysBoneAPI
                 continue;
             }
 
-            ComponentUtility.CopyComponent(physBone);
-            ComponentUtility.PasteComponentAsNew(rootTransform.gameObject);
+            // 使用 AddComponent + CopySerialized 方式替代 CopyComponent/PasteComponentAsNew，
+            // 确保第三方 DLL 组件（VRCPhysBone、VRCPhysBoneCollider）能正确迁移
+            var newComponent = rootTransform.gameObject.AddComponent(physBone.GetType());
+            EditorUtility.CopySerialized(physBone, newComponent);
             Undo.DestroyObjectImmediate(physBone);
             movedPhysBonesCount++;
         }
@@ -93,8 +95,10 @@ public static class VRCPhysBoneAPI
                 continue;
             }
 
-            ComponentUtility.CopyComponent(collider);
-            ComponentUtility.PasteComponentAsNew(rootTransform.gameObject);
+            // 使用 AddComponent + CopySerialized 方式替代 CopyComponent/PasteComponentAsNew，
+            // 确保第三方 DLL 组件（VRCPhysBoneCollider）能正确迁移
+            var newCollider = rootTransform.gameObject.AddComponent(collider.GetType());
+            EditorUtility.CopySerialized(collider, newCollider);
             Undo.DestroyObjectImmediate(collider);
             movedCollidersCount++;
         }
@@ -211,7 +215,8 @@ public static class VRCPhysBoneAPI
 
             string typeName = component.GetType().Name;
 
-            if (typeName.Contains("Collider") || typeName.Contains("Phys_Bone_Collider"))
+            // 只匹配 VRCPhysBoneCollider，排除 Unity 内置 BoxCollider/SphereCollider 等
+            if (typeName.Contains("Phys") && typeName.Contains("Collider"))
             {
                 colliders.Add(component);
             }
