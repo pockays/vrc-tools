@@ -45,8 +45,9 @@ public class VRCPhysBoneOptimizerPlugin : Plugin<VRCPhysBoneOptimizerPlugin>
                         {
                             if (obj != null)
                             {
+                                string objName = obj.name;
                                 VRCPhysBoneAPI.DeleteSourceObject(obj);
-                                Debug.Log($"[PhysBone优化-删除] 已删除源对象: {obj.name}");
+                                Debug.Log($"[PhysBone优化-删除] 已删除源对象: {objName}");
                             }
                         }
                     }
