@@ -596,6 +596,9 @@ public static class VRCPhysBoneAPI
                 BindingFlags.Public | BindingFlags.Instance);
             foreach (PropertyInfo property in properties)
             {
+                // 跳过 UnityEngine.Component 基类上已弃用的 collider 属性
+                if (property.DeclaringType == typeof(UnityEngine.Component))
+                    continue;
                 string propertyName = property.Name.ToLower();
                 if (propertyName.Contains("colliders") || propertyName.Contains("collider"))
                 {
