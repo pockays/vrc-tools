@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using UnityEditor;
 using UnityEngine;
 using VRC.SDK3A.Editor;
@@ -106,16 +106,23 @@ public class SimpleOperationSoundPlayer : EditorWindow
     {
         if (audioSource == null)
         {
-            // 创建一个隐藏的GameObject来播放音效
+            CleanupOrphanedPlayers();
             GameObject soundPlayerObject = new GameObject("EditorSoundPlayer");
-            
-            // 添加AudioSource组件
+            soundPlayerObject.hideFlags = HideFlags.HideAndDontSave;
             audioSource = soundPlayerObject.AddComponent<AudioSource>();
             audioSource.playOnAwake = false;
             audioSource.volume = volume;
         }
     }
 
+    private static void CleanupOrphanedPlayers()
+    {
+        var existing = GameObject.Find("EditorSoundPlayer");
+        if (existing != null)
+        {
+            Object.DestroyImmediate(existing);
+        }
+    }
     private static void PlaySound(string operationType)
     {
         if (operationSound == null)
