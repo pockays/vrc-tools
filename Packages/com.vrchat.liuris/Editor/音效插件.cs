@@ -120,7 +120,7 @@ public class SimpleOperationSoundPlayer : EditorWindow
         var existing = GameObject.Find("EditorSoundPlayer");
         if (existing != null)
         {
-            Object.DestroyImmediate(existing);
+            UnityEngine.Object.DestroyImmediate(existing);
         }
     }
     private static void PlaySound(string operationType)
