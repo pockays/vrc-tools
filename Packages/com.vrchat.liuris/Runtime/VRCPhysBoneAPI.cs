@@ -49,6 +49,42 @@ public static class VRCPhysBoneAPI
             totalCollidersCount += colliders.Length;
         }
 
+        // ============================================================
+        // 第一步：先迁移所有 PhysBoneCollider（保留原始对象不删除，建立映射）
+        // ============================================================
+        // 原因：PhysBone 的 collider 属性引用了 Collider 组件。
+        // 如果先迁移 PhysBone 再迁移 Collider，新 PhysBone 中的 collider 引用
+        // 会指向被销毁的旧 Collider，导致引用丢失。
+        // 因此先迁移 Collider，再迁移 PhysBone 并修正引用。
+        var colliderOldToNew = new Dictionary<Component, Component>();
+
+        foreach (var collider in allColliders)
+        {
+            var rootTransform = GetRootTransformField(collider);
+            if (rootTransform == null)
+            {
+                Debug.LogWarning($"[PhysBone优化-迁移] {collider.gameObject.name} 上的 PhysBoneCollider rootTransform 为 null，跳过迁移");
+                continue;
+            }
+            if (rootTransform == collider.gameObject.transform)
+            {
+                continue;
+            }
+            if (rootTransform.IsChildOf(target.transform) || rootTransform == target.transform)
+            {
+                Debug.LogWarning($"[PhysBone优化-迁移] {collider.gameObject.name} 的 rootTransform ({rootTransform.name}) 在源对象内部，跳过迁移");
+                continue;
+            }
+
+            var newCollider = rootTransform.gameObject.AddComponent(collider.GetType());
+            EditorUtility.CopySerialized(collider, newCollider);
+            colliderOldToNew[collider] = newCollider;
+            movedCollidersCount++;
+        }
+
+        // ============================================================
+        // 第二步：迁移所有 PhysBone，并修正 collider 引用指向新 Collider
+        // ============================================================
         foreach (var physBone in allPhysBones)
         {
             var rootTransform = GetRootTransformField(physBone);
@@ -73,34 +109,25 @@ public static class VRCPhysBoneAPI
             // 确保第三方 DLL 组件（VRCPhysBone、VRCPhysBoneCollider）能正确迁移
             var newComponent = rootTransform.gameObject.AddComponent(physBone.GetType());
             EditorUtility.CopySerialized(physBone, newComponent);
-            Undo.DestroyObjectImmediate(physBone);
+
+            // 修正 collider 引用：将旧 Collider 引用替换为新 Collider 引用
+            RemapColliderReferences(newComponent, colliderOldToNew);
+
             movedPhysBonesCount++;
         }
 
+        // ============================================================
+        // 第三步：统一删除所有原始组件（Collider 和 PhysBone 都已迁移完成）
+        // ============================================================
         foreach (var collider in allColliders)
         {
-            var rootTransform = GetRootTransformField(collider);
-            if (rootTransform == null)
-            {
-                Debug.LogWarning($"[PhysBone优化-迁移] {collider.gameObject.name} 上的 PhysBoneCollider rootTransform 为 null，跳过迁移");
-                continue;
-            }
-            if (rootTransform == collider.gameObject.transform)
-            {
-                continue;
-            }
-            if (rootTransform.IsChildOf(target.transform) || rootTransform == target.transform)
-            {
-                Debug.LogWarning($"[PhysBone优化-迁移] {collider.gameObject.name} 的 rootTransform ({rootTransform.name}) 在源对象内部，跳过迁移");
-                continue;
-            }
-
-            // 使用 AddComponent + CopySerialized 方式替代 CopyComponent/PasteComponentAsNew，
-            // 确保第三方 DLL 组件（VRCPhysBoneCollider）能正确迁移
-            var newCollider = rootTransform.gameObject.AddComponent(collider.GetType());
-            EditorUtility.CopySerialized(collider, newCollider);
-            Undo.DestroyObjectImmediate(collider);
-            movedCollidersCount++;
+            if (collider != null)
+                Undo.DestroyObjectImmediate(collider);
+        }
+        foreach (var physBone in allPhysBones)
+        {
+            if (physBone != null)
+                Undo.DestroyObjectImmediate(physBone);
         }
 
         int totalMoved = movedPhysBonesCount + movedCollidersCount;
@@ -201,6 +228,63 @@ public static class VRCPhysBoneAPI
     // ============================================================
     // 辅助方法
     // ============================================================
+
+    /// <summary>
+    /// 修正 PhysBone 中的 collider 引用，将旧 Collider 替换为映射中的新 Collider。
+    /// 在 MovePhysBonesToRoot 中，Collider 先于 PhysBone 迁移，此方法确保
+    /// PhysBone 的 collider 列表指向新的 Collider 组件而非已销毁的旧组件。
+    /// </summary>
+    private static void RemapColliderReferences(Component physBone, Dictionary<Component, Component> oldToNew)
+    {
+        if (physBone == null || oldToNew == null || oldToNew.Count == 0) return;
+
+        System.Type type = physBone.GetType();
+
+        // 查找 colliders 字段
+        FieldInfo collidersField = null;
+        foreach (FieldInfo field in type.GetFields(
+            BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance))
+        {
+            string fieldName = field.Name.ToLower();
+            if (fieldName.Contains("colliders") || fieldName.Contains("collider"))
+            {
+                collidersField = field;
+                break;
+            }
+        }
+
+        if (collidersField == null) return;
+
+        try
+        {
+            object collidersValue = collidersField.GetValue(physBone);
+            if (collidersValue == null) return;
+
+            var collidersList = collidersValue as System.Collections.IList;
+            if (collidersList != null)
+            {
+                bool modified = false;
+                for (int i = 0; i < collidersList.Count; i++)
+                {
+                    var item = collidersList[i];
+                    if (item is Component oldCollider && oldToNew.TryGetValue(oldCollider, out var newCollider))
+                    {
+                        collidersList[i] = newCollider;
+                        modified = true;
+                    }
+                }
+                if (modified)
+                {
+                    collidersField.SetValue(physBone, collidersValue);
+                    EditorUtility.SetDirty(physBone.gameObject);
+                }
+            }
+        }
+        catch (System.Exception e)
+        {
+            Debug.LogWarning($"[PhysBone优化-迁移] 修正 collider 引用失败: {e.Message}");
+        }
+    }
 
     public static Component[] GetAllPhysBoneColliderComponents(GameObject obj)
     {
