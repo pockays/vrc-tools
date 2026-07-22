@@ -101,35 +101,49 @@ public class VRCPhysBoneOrganizer : EditorWindow
 
     private void ProcessSelectedObjects()
     {
-        List<GameObject> selectedObjects = new List<GameObject>();
-        foreach (GameObject obj in Selection.gameObjects)
-        {
-            if (obj != null)
-            {
-                selectedObjects.Add(obj);
-                VRCPhysBoneAPI.AddAllChildren(obj, selectedObjects);
-            }
-        }
-
-        if (selectedObjects.Count == 0)
+        var selected = Selection.gameObjects;
+        if (selected == null || selected.Length == 0)
         {
             statusText = "错误: 没有选择任何对象！";
             Debug.LogWarning(statusText);
             return;
         }
 
-        statusText = $"开始处理 {selectedObjects.Count} 个对象...";
-        Debug.Log(statusText);
+        int totalProcGroups = 0;
+        int totalProcObjects = 0;
+        List<string> statusList = new List<string>();
 
-        int procGroups, procObjects;
-        string resultStatus;
-        VRCPhysBoneAPI.MergePhysBonesFromList(selectedObjects, out procGroups, out procObjects, out resultStatus);
+        // 对每个选中的根对象独立处理，避免不同衣物被错误合并到同一个对象下
+        foreach (GameObject rootObj in selected)
+        {
+            if (rootObj == null) continue;
 
-        totalProcessed = procGroups;
-        totalMerged = procObjects;
-        statusText = resultStatus;
+            int procGroups, procObjects;
+            string resultStatus;
+            VRCPhysBoneAPI.MergePhysBones(rootObj, out procGroups, out procObjects, out resultStatus);
 
-        Debug.Log(statusText);
+            totalProcGroups += procGroups;
+            totalProcObjects += procObjects;
+            if (procGroups > 0)
+                statusList.Add($"{rootObj.name}: {procGroups}组({procObjects}对象)");
+        }
+
+        totalProcessed = totalProcGroups;
+        totalMerged = totalProcObjects;
+
+        if (totalProcGroups > 0)
+        {
+            statusText = $"合并完成: {totalProcGroups} 组（{totalProcObjects} 个对象）";
+            Debug.Log($"<color=green>[PhysBone合并] {statusText}</color>");
+            foreach (var s in statusList)
+                Debug.Log($"  - {s}");
+        }
+        else
+        {
+            statusText = "未找到可合并的Phys Bone组";
+            Debug.Log(statusText);
+        }
+
         Repaint();
     }
 
