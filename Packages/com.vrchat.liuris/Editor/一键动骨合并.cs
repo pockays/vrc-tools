@@ -2,6 +2,7 @@ using UnityEngine;
 using System.Collections.Generic;
 #if UNITY_EDITOR
 using UnityEditor;
+using VRC.SDK3.Dynamics.PhysBone.Components;
 #endif
 
 #if UNITY_EDITOR
@@ -11,6 +12,9 @@ public class VRCPhysBoneOrganizer : EditorWindow
     private string statusText = "就绪";
     private int totalProcessed = 0;
     private int totalMerged = 0;
+
+    private GameObject countTargetObject;
+    private int physBoneCount = 0;
 
     [MenuItem("Tools/VRC Phys Bone Organizer")]
     public static void ShowWindow()
@@ -54,8 +58,26 @@ public class VRCPhysBoneOrganizer : EditorWindow
 
         EditorGUILayout.Space();
 
+        EditorGUILayout.LabelField("Phys Bone 数量统计", EditorStyles.boldLabel);
+
+        EditorGUI.BeginChangeCheck();
+        countTargetObject = (GameObject)EditorGUILayout.ObjectField("统计对象", countTargetObject, typeof(GameObject), true);
+        if (EditorGUI.EndChangeCheck())
+        {
+            CountPhysBones();
+        }
+
+        if (countTargetObject != null)
+        {
+            GUILayout.Label($"VRC Phys Bones 数量: {physBoneCount}",
+                new GUIStyle(EditorStyles.label) { fontSize = 24, normal = { textColor = Color.green } });
+        }
+
+        EditorGUILayout.Space();
+
         EditorGUILayout.HelpBox(
             "！！！！！注意！！！！！\n" +
+            "使用破坏性的合并时\n"+
             "注意备份文件\n" +
             "合并前请先完全解压对象\n" +
             "当骨骼中含有constrain类组件时请谨慎使用\n"+
@@ -96,6 +118,19 @@ public class VRCPhysBoneOrganizer : EditorWindow
 
         statusText = resultStatus + "，已删除源对象";
         Debug.Log(resultStatus);
+        Repaint();
+    }
+
+    private void CountPhysBones()
+    {
+        physBoneCount = 0;
+
+        if (countTargetObject == null) return;
+
+        // 沿用 VRCPhysBoneCounter 的统计逻辑：统计目标对象及其所有子对象上的 VRCPhysBone 数量
+        VRCPhysBone[] physBones = countTargetObject.GetComponentsInChildren<VRCPhysBone>(true);
+        physBoneCount = physBones.Length;
+
         Repaint();
     }
 
