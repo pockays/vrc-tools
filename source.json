@@ -52,7 +52,8 @@
         "llealloo/audiolink",
         "Narazaka/AvatarMenuCreaterForMA",
         "weasel-club/MergeTool",
-        "HhotateA/AvatarPoseLibrary"
+        "HhotateA/AvatarPoseLibrary",
+        "sakuraimikoto33/ParamCompressor"
     ],
     "packages":[
         {
