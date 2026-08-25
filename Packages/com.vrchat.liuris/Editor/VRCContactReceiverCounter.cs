@@ -9,7 +9,7 @@ public class VRCContactReceiverCounter : EditorWindow
     private bool locked;
     private GameObject lockedTarget;
 
-    [MenuItem("Tools/VRC Contact Receiver Counter")]
+    [MenuItem("Tools/咩卡布/VRC Contact Receiver Counter")]
     public static void ShowWindow()
     {
         GetWindow<VRCContactReceiverCounter>("VRC Contact Receiver Counter");

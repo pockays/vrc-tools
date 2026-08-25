@@ -217,7 +217,7 @@ public class SimpleOperationSoundPlayer : EditorWindow
     #endregion
 
     #region 编辑器界面
-    [MenuItem("Tools/操作音效播放器")]
+    [MenuItem("Tools/咩卡布/操作音效播放器")]
     public static void ShowWindow()
     {
         GetWindow<SimpleOperationSoundPlayer>("操作音效", true).minSize = new Vector2(350, 280);

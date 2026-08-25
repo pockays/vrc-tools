@@ -17,7 +17,7 @@ public class ComponentsCopier
 
     static Component[] copiedComponents;
 
-    [MenuItem("GameObject/Copy all components %&C")]
+    [MenuItem("GameObject/咩卡布/Copy all components %&C")]
     static void Copy()
     {
         if (UnityEditor.Selection.activeGameObject == null)

@@ -7,7 +7,7 @@ public class VRCPhysBoneCounter : EditorWindow
     private GameObject targetObject;
     private int physBoneCount = 0;
 
-    [MenuItem("Tools/VRC Phys Bone Counter")]
+    [MenuItem("Tools/咩卡布/VRC Phys Bone Counter")]
     public static void ShowWindow()
     {
         GetWindow<VRCPhysBoneCounter>("VRC Phys Bone 数量统计");

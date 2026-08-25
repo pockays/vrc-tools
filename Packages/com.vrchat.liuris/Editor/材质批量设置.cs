@@ -57,7 +57,7 @@ public class LilToonBatchMaterialEditor : EditorWindow
     
     private List<LilProperty> lilProperties = new List<LilProperty>();
 
-    [MenuItem("Tools/lilToon 批量材质编辑器")]
+    [MenuItem("Tools/咩卡布/lilToon 批量材质编辑器")]
     public static void ShowWindow()
     {
         GetWindow<LilToonBatchMaterialEditor>("lilToon 批量编辑");

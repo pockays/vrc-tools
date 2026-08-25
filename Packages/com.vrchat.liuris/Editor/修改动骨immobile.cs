@@ -163,7 +163,7 @@ public class ModifyVRCPhysBoneImmobile : MonoBehaviour
     }
     
     // 验证菜单项是否可用
-    [UnityEditor.MenuItem("Tools/修改 PhysBone Immobile 值", true)]
+    [UnityEditor.MenuItem("Tools/咩卡布/修改 PhysBone Immobile 值", true)]
     static bool ValidateAddModifierToSelected()
     {
         return UnityEditor.Selection.activeGameObject != null;

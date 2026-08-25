@@ -17,7 +17,7 @@ public class AnimatorPreviewWindow : EditorWindow
     private float animationLength = 0f;
     private double lastUpdateTime;
     
-    [MenuItem("Tools/Animator Preview")]
+    [MenuItem("Tools/咩卡布/Animator Preview")]
     public static void ShowWindow()
     {
         GetWindow<AnimatorPreviewWindow>("Animator Preview").minSize = new Vector2(350, 400);

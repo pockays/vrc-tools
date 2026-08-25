@@ -3,7 +3,7 @@ using UnityEngine;
 
 public class InspectorLockShortcut : EditorWindow
 {
-    [MenuItem("Window/Toggle Inspector %e")]
+    [MenuItem("Window/咩卡布/Toggle Inspector %e")]
     private static void ToggleInspectorLock()
     {
         // 获取Inspector窗口

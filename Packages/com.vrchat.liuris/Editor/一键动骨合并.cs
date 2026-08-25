@@ -16,7 +16,7 @@ public class VRCPhysBoneOrganizer : EditorWindow
     private GameObject countTargetObject;
     private int physBoneCount = 0;
 
-    [MenuItem("Tools/VRC Phys Bone Organizer")]
+    [MenuItem("Tools/咩卡布/VRC Phys Bone Organizer")]
     public static void ShowWindow()
     {
         GetWindow<VRCPhysBoneOrganizer>("Phys Bone Organizer");

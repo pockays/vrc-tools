@@ -13,7 +13,7 @@ public class MaterialManager : EditorWindow
     private bool isLocked = false;
     private string lockButtonText = "锁定";
     
-    [MenuItem("Tools/材质管理器")]
+    [MenuItem("Tools/咩卡布/材质管理器")]
     public static void ShowWindow()
     {
         GetWindow<MaterialManager>("材质管理器");

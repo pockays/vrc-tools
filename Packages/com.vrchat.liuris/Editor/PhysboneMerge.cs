@@ -6,7 +6,7 @@ using System.Collections.Generic;
 
 public class VRCPhysBoneHandler
 {
-    [MenuItem("Tools/处理VRCPhysBone组件 _r")]
+    [MenuItem("Tools/咩卡布/处理VRCPhysBone组件 _r")]
     private static void ProcessSelectedGameObject()
     {
         GameObject selectedObject = Selection.activeGameObject;

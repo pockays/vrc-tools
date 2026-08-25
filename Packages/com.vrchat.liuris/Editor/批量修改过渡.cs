@@ -97,7 +97,7 @@ public class AnimatorControllerBatchEditor : EditorWindow
         }
     }
 
-    [MenuItem("Tools/动画控制器批量编辑器")]
+    [MenuItem("Tools/咩卡布/动画控制器批量编辑器")]
     public static void ShowWindow()
     {
         GetWindow<AnimatorControllerBatchEditor>("动画控制器编辑器");
