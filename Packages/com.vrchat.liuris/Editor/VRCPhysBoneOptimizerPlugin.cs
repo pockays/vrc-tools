@@ -1,5 +1,6 @@
 using UnityEditor;
 using UnityEngine;
+using System.Collections.Generic;
 using nadena.dev.ndmf;
 
 [assembly: ExportsPlugin(typeof(VRCPhysBoneOptimizerPlugin))]
@@ -17,89 +18,45 @@ public class VRCPhysBoneOptimizerPlugin : Plugin<VRCPhysBoneOptimizerPlugin>
                 Debug.Log($"[PhysBone优化] ========== 插件开始运行 ==========");
                 Debug.Log($"[PhysBone优化] AvatarRoot: {ctx.AvatarRootObject.name}");
 
-                // 尝试多种方式查找 VRCPhysBoneOptimizer 组件
+                // 开关组件：挂载即启用全局优化，无需再填源对象
                 var optimizers = ctx.AvatarRootObject.GetComponentsInChildren<VRCPhysBoneOptimizer>(true);
-                Debug.Log($"[PhysBone优化] GetComponentsInChildren 找到 {optimizers.Length} 个 optimizer");
-
-                // 备用：用 FindObjectsOfType 在整个场景中找
-                var allInScene = Object.FindObjectsOfType<VRCPhysBoneOptimizer>();
-                Debug.Log($"[PhysBone优化] FindObjectsOfType 找到 {allInScene.Length} 个 optimizer");
-
-                // 如果有 FindObjectsOfType 找到了但 GetComponentsInChildren 没找到，用前者
-                if (optimizers.Length == 0 && allInScene.Length > 0)
-                {
-                    Debug.LogWarning("[PhysBone优化] GetComponentsInChildren 没找到，改用 FindObjectsOfType 的结果");
-                    optimizers = allInScene;
-                }
-
                 if (optimizers.Length == 0)
                 {
-                    Debug.LogWarning("[PhysBone优化] 没有找到任何 VRCPhysBoneOptimizer 组件，跳过处理");
+                    Debug.LogWarning("[PhysBone优化] 未找到 VRCPhysBoneOptimizer 开关组件，跳过处理");
                     return;
                 }
+                Debug.Log($"[PhysBone优化] 找到 {optimizers.Length} 个 VRCPhysBoneOptimizer 开关，开始全局优化");
 
+                // ============================================================
+                // 第一步：全局迁移 —— 扫描 avatar 下所有 PhysBone/Collider，
+                // rootTransform 非空且不在自身内部的一律迁移到其 root 骨骼
+                // ============================================================
+                string migrateStatus;
+                List<GameObject> migratedObjects;
+                VRCPhysBoneAPI.MoveAllPhysBonesToRoot(ctx.AvatarRootObject, out migrateStatus, out migratedObjects);
+                Debug.Log($"<color=green>[PhysBone优化-迁移] {migrateStatus}</color>");
+
+                // ============================================================
+                // 第二步：清理迁移后产生的空壳对象
+                // ============================================================
+                string shellStatus;
+                VRCPhysBoneAPI.DeleteEmptyShells(ctx.AvatarRootObject, migratedObjects, out shellStatus);
+                Debug.Log($"[PhysBone优化-删空壳] {shellStatus}");
+
+                // ============================================================
+                // 第三步：对 avatar 全局执行 PhysBone 合并
+                // ============================================================
+                string mergeStatus;
+                VRCPhysBoneAPI.MergePhysBones(ctx.AvatarRootObject, out _, out _, out mergeStatus);
+                Debug.Log($"<color=green>[PhysBone优化-合并] {mergeStatus}</color>");
+
+                // ============================================================
+                // 清理开关组件（NDMF 编辑器标记，构建后无需保留）
+                // ============================================================
                 foreach (var optimizer in optimizers)
                 {
-                    if (optimizer == null)
-                    {
-                        Debug.LogWarning("[PhysBone优化] 遇到 null optimizer，跳过");
-                        continue;
-                    }
-
-                    Debug.Log($"[PhysBone优化] 处理 optimizer: {optimizer.gameObject.name}, sourcePBObjects 数量: {(optimizer.sourcePBObjects != null ? optimizer.sourcePBObjects.Count : 0)}");
-
-                    // ============================================================
-                    // 第一步：对所有源对象执行"迁移PhysBone到Root"
-                    // ============================================================
-                    if (optimizer.sourcePBObjects != null && optimizer.sourcePBObjects.Count > 0)
-                    {
-                        for (int i = optimizer.sourcePBObjects.Count - 1; i >= 0; i--)
-                        {
-                            var obj = optimizer.sourcePBObjects[i];
-                            if (obj != null)
-                            {
-                                string status;
-                                VRCPhysBoneAPI.MovePhysBonesToRoot(obj, out status);
-                                Debug.Log($"[PhysBone优化-迁移] {obj.name}: {status}");
-                            }
-                        }
-                    }
-
-                    // ============================================================
-                    // 第二步：删除源对象（迁移完成后安全删除）
-                    // ============================================================
-                    if (optimizer.sourcePBObjects != null && optimizer.sourcePBObjects.Count > 0)
-                    {
-                        for (int i = optimizer.sourcePBObjects.Count - 1; i >= 0; i--)
-                        {
-                            var obj = optimizer.sourcePBObjects[i];
-                            if (obj != null)
-                            {
-                                string objName = obj.name;
-                                VRCPhysBoneAPI.DeleteSourceObject(obj);
-                                Debug.Log($"[PhysBone优化-删除] 已删除源对象: {objName}");
-                            }
-                        }
-                    }
-
-                    // 安全检查：DeleteSourceObject 可能删除了 optimizer 所在的 GameObject
-                    if (optimizer == null || optimizer.gameObject == null)
-                    {
-                        Debug.LogWarning("[PhysBone优化] optimizer 的 GameObject 在删除源对象时被移除，跳过合并步骤");
-                        continue;
-                    }
-
-                    // ============================================================
-                    // 第三步：对挂载对象执行"合并PhysBones"
-                    // ============================================================
-                    Debug.Log($"[PhysBone优化] 开始合并 PhysBones，目标: {optimizer.gameObject.name}");
-                    string mergeStatus;
-                    VRCPhysBoneAPI.MergePhysBones(optimizer.gameObject, out _, out _, out mergeStatus);
-                    Debug.Log($"<color=green>[PhysBone优化-合并] {mergeStatus}</color>");
-
-                    // 清理已处理的组件
-                    Object.DestroyImmediate(optimizer);
-                    Debug.Log($"[PhysBone优化] 已销毁 optimizer 组件");
+                    if (optimizer != null)
+                        Object.DestroyImmediate(optimizer);
                 }
 
                 Debug.Log($"[PhysBone优化] ========== 插件运行完毕 ==========");

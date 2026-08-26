@@ -33,12 +33,6 @@ public class VRCPhysBoneOrganizer : EditorWindow
         }
 
         EditorGUILayout.Space();
-        if (GUILayout.Button("移动PhysBones到Root", GUILayout.Height(40)))
-        {
-            MovePhysBonesToRoot();
-        }
-
-        EditorGUILayout.Space();
         EditorGUILayout.BeginHorizontal();
         if (GUILayout.Button("挂载PhysBone Optimizer", GUILayout.Height(36)))
         {
@@ -81,7 +75,7 @@ public class VRCPhysBoneOrganizer : EditorWindow
             "注意备份文件\n" +
             "合并前请先完全解压对象\n" +
             "当骨骼中含有constrain类组件时请谨慎使用\n"+
-            "当动骨都处于PB对象下时，请先对PB对象点击\"移动phybones到root\"，再点击衣服进行合并",
+            "\"合并选中的Phys Bones\"会依次执行：移动PhysBone到root → 合并 → 删除空壳",
             MessageType.Warning
         );
 
@@ -102,24 +96,6 @@ public class VRCPhysBoneOrganizer : EditorWindow
     // ============================================================
     // UI 方法 — 委托给 VRCPhysBoneAPI 静态方法
     // ============================================================
-
-    private void MovePhysBonesToRoot()
-    {
-        if (Selection.activeGameObject == null)
-        {
-            EditorUtility.DisplayDialog("错误", "请先选中一个GameObject", "确定");
-            return;
-        }
-
-        GameObject target = Selection.activeGameObject;
-        string resultStatus;
-        VRCPhysBoneAPI.MovePhysBonesToRoot(target, out resultStatus);
-        VRCPhysBoneAPI.DeleteSourceObject(target);
-
-        statusText = resultStatus + "，已删除源对象";
-        Debug.Log(resultStatus);
-        Repaint();
-    }
 
     private void CountPhysBones()
     {
@@ -146,6 +122,8 @@ public class VRCPhysBoneOrganizer : EditorWindow
 
         int totalProcGroups = 0;
         int totalProcObjects = 0;
+        int totalMigrated = 0;
+        int totalDeleted = 0;
         List<string> statusList = new List<string>();
 
         // 对每个选中的根对象独立处理，避免不同衣物被错误合并到同一个对象下
@@ -153,12 +131,25 @@ public class VRCPhysBoneOrganizer : EditorWindow
         {
             if (rootObj == null) continue;
 
+            // 第一步：移动 —— 把 rootObj 下所有 PhysBone/Collider 迁移到各自 root 骨骼
+            string migrateStatus;
+            List<GameObject> migratedObjects;
+            VRCPhysBoneAPI.MoveAllPhysBonesToRoot(rootObj, out migrateStatus, out migratedObjects);
+            totalMigrated += migratedObjects.Count;
+            Debug.Log($"[PhysBone合并] {rootObj.name} 移动: {migrateStatus}");
+
+            // 第二步：合并 —— 合并 rootObj 下同父级同配置的 PhysBone
             int procGroups, procObjects;
             string resultStatus;
             VRCPhysBoneAPI.MergePhysBones(rootObj, out procGroups, out procObjects, out resultStatus);
-
             totalProcGroups += procGroups;
             totalProcObjects += procObjects;
+
+            // 第三步：删除 —— 清理迁移后产生的空壳对象
+            string shellStatus;
+            totalDeleted += VRCPhysBoneAPI.DeleteEmptyShells(rootObj, migratedObjects, out shellStatus);
+            Debug.Log($"[PhysBone合并] {rootObj.name} 删空壳: {shellStatus}");
+
             if (procGroups > 0)
                 statusList.Add($"{rootObj.name}: {procGroups}组({procObjects}对象)");
         }
@@ -168,14 +159,14 @@ public class VRCPhysBoneOrganizer : EditorWindow
 
         if (totalProcGroups > 0)
         {
-            statusText = $"合并完成: {totalProcGroups} 组（{totalProcObjects} 个对象）";
+            statusText = $"完成: 移动{totalMigrated}对象 / 合并{totalProcGroups}组({totalProcObjects}对象) / 删除{totalDeleted}空壳";
             Debug.Log($"<color=green>[PhysBone合并] {statusText}</color>");
             foreach (var s in statusList)
                 Debug.Log($"  - {s}");
         }
         else
         {
-            statusText = "未找到可合并的Phys Bone组";
+            statusText = $"未找到可合并的Phys Bone组（移动{totalMigrated}对象 / 删除{totalDeleted}空壳）";
             Debug.Log(statusText);
         }
 
