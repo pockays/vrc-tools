@@ -1,23 +1,23 @@
 ﻿#if UNITY_EDITOR
 using UnityEngine;
 using UnityEditor;
-using VRC.SDK3.Dynamics.Contact.Components;
 
 public class VRCContactReceiverCounter : EditorWindow
 {
     private Vector2 scrollPosition;
     private bool locked;
     private GameObject lockedTarget;
+    private string searchFilter = "";
 
-    [MenuItem("Tools/咩卡布/VRC Contact Receiver Counter")]
+    [MenuItem("Tools/组件统计")]
     public static void ShowWindow()
     {
-        GetWindow<VRCContactReceiverCounter>("VRC Contact Receiver Counter");
+        GetWindow<VRCContactReceiverCounter>("组件统计");
     }
 
     private void OnGUI()
     {
-        GUILayout.Label("VRC Contact 组件统计", EditorStyles.boldLabel);
+        GUILayout.Label("组件统计", EditorStyles.boldLabel);
         GUILayout.Space(4);
 
         GameObject selected = locked ? lockedTarget : Selection.activeGameObject;
@@ -47,6 +47,17 @@ public class VRCContactReceiverCounter : EditorWindow
         GUILayout.Label($"当前对象: {selected.name}", EditorStyles.label);
         GUILayout.Space(8);
 
+        EditorGUILayout.BeginHorizontal();
+        GUILayout.Label("搜索组件名:", GUILayout.Width(80));
+        searchFilter = EditorGUILayout.TextField(searchFilter);
+        if (GUILayout.Button("清除", GUILayout.Width(40)))
+        {
+            searchFilter = "";
+            GUI.FocusControl(null);
+        }
+        EditorGUILayout.EndHorizontal();
+        GUILayout.Space(4);
+
         int childCount = selected.transform.childCount;
         if (childCount == 0)
         {
@@ -60,8 +71,7 @@ public class VRCContactReceiverCounter : EditorWindow
         for (int i = 0; i < childCount; i++)
         {
             Transform child = selected.transform.GetChild(i);
-            int count = child.GetComponentsInChildren<VRCContactReceiver>(includeInactive: true).Length
-                      + child.GetComponentsInChildren<VRCContactSender>(includeInactive: true).Length;
+            int count = CountComponents(child, searchFilter);
             total += count;
 
             EditorGUILayout.BeginHorizontal();
@@ -85,6 +95,27 @@ public class VRCContactReceiverCounter : EditorWindow
         GUILayout.Label("总计:", EditorStyles.boldLabel, GUILayout.Width(250));
         GUILayout.Label(total.ToString(), EditorStyles.boldLabel, GUILayout.Width(50));
         EditorGUILayout.EndHorizontal();
+    }
+
+    private int CountComponents(Transform child, string filter)
+    {
+        // 未输入搜索时，默认不统计任何组件
+        if (string.IsNullOrEmpty(filter))
+        {
+            return 0;
+        }
+
+        // 输入搜索时：只要组件名包含搜索字符就全部统计
+        Component[] all = child.GetComponentsInChildren<Component>(includeInactive: true);
+        int count = 0;
+        foreach (Component component in all)
+        {
+            if (component != null && component.GetType().Name.IndexOf(filter, System.StringComparison.OrdinalIgnoreCase) >= 0)
+            {
+                count++;
+            }
+        }
+        return count;
     }
 
     private void OnSelectionChange()
