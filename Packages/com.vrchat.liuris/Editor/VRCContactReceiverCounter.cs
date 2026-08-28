@@ -9,7 +9,7 @@ public class VRCContactReceiverCounter : EditorWindow
     private GameObject lockedTarget;
     private string searchFilter = "";
 
-    [MenuItem("Tools/组件统计")]
+    [MenuItem("Tools/咩卡布/组件统计")]
     public static void ShowWindow()
     {
         GetWindow<VRCContactReceiverCounter>("组件统计");
