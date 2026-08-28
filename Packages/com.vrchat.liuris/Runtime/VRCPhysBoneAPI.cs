@@ -187,12 +187,16 @@ public static class VRCPhysBoneAPI
         var sorted = new List<GameObject>(candidates);
         sorted.Sort((a, b) => GetHierarchyDepth(b).CompareTo(GetHierarchyDepth(a)));
 
+        // 预先收集"被引用"的对象 ID：被其它组件（骨骼、约束、碰撞体等）或动画引用的对象不能当空壳删除
+        var referencedIds = CollectReferencedGameObjectIds(root);
+
         int deletedCount = 0;
         foreach (var obj in sorted)
         {
             if (obj == null || obj == root) continue;
-            if (!IsEmptyShell(obj)) continue;
-            if (obj.transform.childCount > 0) continue; // 还有未删除的子对象，说明有实质内容
+            if (!IsEmptyShell(obj)) continue;                          // 有组件（网格、渲染器等）→ 不是空壳
+            if (obj.transform.childCount > 0) continue;                // 还有子对象 → 有实质内容
+            if (referencedIds.Contains(obj.GetInstanceID())) continue; // 被引用（骨骼/动画/约束等）→ 不能删
 
             Undo.DestroyObjectImmediate(obj);
             deletedCount++;
@@ -209,6 +213,80 @@ public static class VRCPhysBoneAPI
     {
         if (obj == null) return false;
         return obj.GetComponents<Component>().Length <= 1;
+    }
+
+    /// <summary>
+    /// 收集 root 子树内所有"被引用"的 GameObject InstanceID。
+    /// 引用来源：1) 任意组件的序列化对象引用（SkinnedMeshRenderer 的 bones/rootBone、
+    /// 约束的 source、PhysBone 的 rootTransform/colliders、碰撞体等）；
+    /// 2) Animator/Animation 动画 clip 的绑定路径。
+    /// 这些对象即使除 Transform 外没有任何组件、也没有子对象，也不能当作空壳删除。
+    /// </summary>
+    private static HashSet<int> CollectReferencedGameObjectIds(GameObject root)
+    {
+        var referenced = new HashSet<int>();
+
+        // 1) 组件对象引用
+        foreach (var comp in root.GetComponentsInChildren<Component>(true))
+        {
+            if (comp == null) continue;
+            if (comp is Transform) continue; // 父子关系由 childCount 判断，排除 m_Father/m_Children 干扰
+
+            SerializedObject so;
+            try { so = new SerializedObject(comp); }
+            catch { continue; }
+
+            var it = so.GetIterator();
+            while (it.NextVisible(true))
+            {
+                if (it.propertyType != SerializedPropertyType.ObjectReference) continue;
+                var refObj = it.objectReferenceValue;
+                if (refObj == null) continue;
+
+                var refGo = refObj as GameObject ?? (refObj as Component)?.gameObject;
+                if (refGo != null)
+                    referenced.Add(refGo.GetInstanceID());
+            }
+        }
+
+        // 2) 动画绑定路径（失败时降级为仅组件引用，不影响删除流程）
+        try
+        {
+            foreach (var animator in root.GetComponentsInChildren<Animator>(true))
+            {
+                if (animator == null || animator.runtimeAnimatorController == null) continue;
+                AddAnimatedPathIds(animator.transform, animator.runtimeAnimatorController.animationClips, referenced);
+            }
+            foreach (var animation in root.GetComponentsInChildren<Animation>(true))
+            {
+                if (animation == null) continue;
+                AddAnimatedPathIds(animation.transform, AnimationUtility.GetAnimationClips(animation.gameObject), referenced);
+            }
+        }
+        catch { }
+
+        return referenced;
+    }
+
+    /// <summary>
+    /// 解析动画 clip 的绑定路径，把被动画的对象加入 referenced 集合。
+    /// binding.path 相对其 Animator/Animation 的根，空路径表示动画作用于该根自身。
+    /// </summary>
+    private static void AddAnimatedPathIds(Transform animatedRoot, AnimationClip[] clips, HashSet<int> referenced)
+    {
+        if (clips == null) return;
+        foreach (var clip in clips)
+        {
+            if (clip == null) continue;
+            foreach (var binding in AnimationUtility.GetCurveBindings(clip))
+            {
+                var target = string.IsNullOrEmpty(binding.path)
+                    ? animatedRoot
+                    : animatedRoot.Find(binding.path);
+                if (target != null)
+                    referenced.Add(target.gameObject.GetInstanceID());
+            }
+        }
     }
 
     /// <summary>
