@@ -131,10 +131,12 @@ public class VRCPhysBoneOrganizer : EditorWindow
         {
             if (rootObj == null) continue;
 
-            // 第一步：移动 —— 把 rootObj 下所有 PhysBone/Collider 迁移到各自 root 骨骼
+            // 第一步：移动 —— 把 rootObj 下所有 PhysBone/Collider 迁移到各自 root 骨骼。
+            // referenceScope 找 avatar/Animator 根：迁移会销毁并重建 Collider，
+            // 全身所有引用这些 Collider 的 PhysBone 都要改指向新组件，避免残留 Missing 引用。
             string migrateStatus;
             List<GameObject> migratedObjects;
-            VRCPhysBoneAPI.MoveAllPhysBonesToRoot(rootObj, out migrateStatus, out migratedObjects);
+            VRCPhysBoneAPI.MoveAllPhysBonesToRoot(rootObj, out migrateStatus, out migratedObjects, FindReferenceScope(rootObj));
             totalMigrated += migratedObjects.Count;
             Debug.Log($"[PhysBone合并] {rootObj.name} 移动: {migrateStatus}");
 
@@ -220,6 +222,23 @@ public class VRCPhysBoneOrganizer : EditorWindow
         statusText = $"已清除 {count} 个对象上的 PhysBone Optimizer";
         Debug.Log(statusText);
         Repaint();
+    }
+
+    // 向上找"最外层带 Animator 的对象"（通常是 Avatar 根），作为重建 colliders 引用的范围；
+    // 没找到则返回 null，VRCPhysBoneAPI 内部会自动退回用所选根对象本身作为范围。
+    private static GameObject FindReferenceScope(GameObject rootObj)
+    {
+        if (rootObj == null) return null;
+
+        GameObject scope = null;
+        Transform t = rootObj.transform;
+        while (t != null)
+        {
+            if (t.GetComponent<Animator>() != null)
+                scope = t.gameObject;
+            t = t.parent;
+        }
+        return scope;
     }
 }
 #endif

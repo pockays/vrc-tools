@@ -21,8 +21,14 @@ public static class VRCPhysBoneAPI
     /// 对指定对象执行"迁移PhysBone到Root"操作。
     /// 将对象及其子对象上的PhysBone和PhysBoneCollider组件移动到rootTransform对应的骨骼上。
     /// </summary>
+    /// <param name="root">迁移作用范围：只迁移 root 子树内的 PhysBone/Collider，并可清理其产生的空壳</param>
+    /// <param name="referenceScope">
+    /// 重建 colliders 引用的范围（默认 = root）。迁移 Collider 采用"销毁原组件 + 在 root 骨骼上新建"，
+    /// 任何引用过被迁移 Collider 的 PhysBone 都必须改指向新组件，否则会留下 Missing 引用，
+    /// 并被 AAO"Trace And Optimize → 自动删除未使用对象"误删。NDMF 构建时请传入整个 Avatar 根。
+    /// </param>
     /// <returns>是否有任何组件被迁移</returns>
-    public static bool MoveAllPhysBonesToRoot(GameObject root, out string status, out List<GameObject> migratedObjects)
+    public static bool MoveAllPhysBonesToRoot(GameObject root, out string status, out List<GameObject> migratedObjects, GameObject referenceScope = null)
     {
         status = "";
         migratedObjects = new List<GameObject>();
@@ -41,6 +47,10 @@ public static class VRCPhysBoneAPI
         List<Component> allColliders = new List<Component>();
         HashSet<GameObject> migratedSet = new HashSet<GameObject>();
 
+        // root 子树的 GameObject ID 集合：迁移动作（移动 PhysBone/Collider）只允许发生在 root 子树内
+        var rootObjectIds = new HashSet<int>();
+        foreach (var o in allObjects) rootObjectIds.Add(o.GetInstanceID());
+
         foreach (var obj in allObjects)
         {
             var physBones = GetAllPhysBoneComponents(obj);
@@ -56,12 +66,31 @@ public static class VRCPhysBoneAPI
         migratedObjects = migratedSet.ToList();
 
         // ============================================================
-        // 在销毁任何组件之前，快照每个 PhysBone 的 colliders 引用（只存 InstanceID）。
-        // "复制 + 销毁" 的迁移方式会破坏被移动 collider 的引用（变成 Missing），
-        // 因此必须赶在引用仍有效时先记录下来，之后据此重建。
+        // 需要"重建 colliders 引用"的 PhysBone 全集（fixPhysBones）：
+        //   · root 子树内的所有 PhysBone（含"本来就在 root 上、不会被迁移"的那些）
+        //   · referenceScope 子树内、root 之外的 PhysBone（只修引用，不做迁移）
+        // 原因：本工具迁移 Collider 采用"先销毁原组件、再在 root 骨骼上新建组件"，
+        // 若只修复 root 子树内的引用，那么子树外仍引用这些 Collider 的 PhysBone 会留下
+        // 指向"已销毁组件"的 Missing 引用；随后 AAO"Trace And Optimize → 自动删除未使用对象"
+        // 在 BuildPhase.Optimizing 阶段扫描时，看到迁移后的碰撞球无人引用，就会把它当作
+        // 未使用组件整个删除。因此插件构建时会传入整个 Avatar 根，把全身引用它的 PhysBone 都修好。
         // ============================================================
+        if (referenceScope == null) referenceScope = root;
+        var fixPhysBones = new List<Component>();
+        if (referenceScope != root)
+        {
+            foreach (var obj in GetAllObjectsInHierarchy(referenceScope))
+            foreach (var pb in GetAllPhysBoneComponents(obj))
+                if (!fixPhysBones.Contains(pb))
+                    fixPhysBones.Add(pb);
+        }
+        foreach (var pb in allPhysBones)
+            if (!fixPhysBones.Contains(pb))
+                fixPhysBones.Add(pb);
+
+        // 快照必须发生在任何组件被销毁之前（此时引用仍有效）
         List<List<int>> physBoneColliderIds = new List<List<int>>();
-        foreach (var physBone in allPhysBones)
+        foreach (var physBone in fixPhysBones)
         {
             var ids = new List<int>();
             foreach (var c in GetColliderReferences(physBone))
@@ -98,45 +127,61 @@ public static class VRCPhysBoneAPI
             int oldId = collider.GetInstanceID();
             var newCollider = rootTransform.gameObject.AddComponent(collider.GetType());
             EditorUtility.CopySerialized(collider, newCollider);
+            // 新 collider 挂在 rootTransform 骨骼上，rootTransform 保留指向该骨骼 —— 组件挂载点==参考骨骼
+            // 就是 VRChat 的"标准写法"，和"碰撞球本来就直接放在 root 骨骼上"的情形完全一致，位置不会变。
+            // 千万不要把 rootTransform 置 null：置 null 会让碰撞球失去参考系（AAO 依赖 rootTransform
+            // 记录它、运行时 gizmo 也依赖它），既可能"看不见"，也更容易被 AAO 的未使用对象清理误删。
             Undo.DestroyObjectImmediate(collider);
             colliderMap[oldId] = newCollider;
             movedCollidersCount++;
         }
 
         // ============================================================
-        // 第二步：移动 physBone，并根据快照 + 映射重建 colliders 引用
+        // 第二步：移动 physBone（仅 root 子树内、且确实需要迁移的），
+        // 并对 fixPhysBones 里的每一个 PhysBone（无论是否迁移）重建 colliders 引用
         // ============================================================
-        for (int i = 0; i < allPhysBones.Count; i++)
+        for (int i = 0; i < fixPhysBones.Count; i++)
         {
-            var physBone = allPhysBones[i];
-            var rootTransform = GetRootTransformField(physBone);
-            if (rootTransform == null)
+            var physBone = fixPhysBones[i];
+            if (physBone == null) continue;
+            Component survivingComponent = physBone;
+
+            // 只有 root 子树内的 PhysBone 才允许迁移；
+            // 子树外的（referenceScope 引入的引用者）只修引用，绝不动它的位置
+            if (rootObjectIds.Contains(physBone.gameObject.GetInstanceID()))
             {
-                Debug.LogWarning($"[PhysBone优化-迁移] {physBone.gameObject.name} 上的 PhysBone rootTransform 为 null，跳过迁移");
-                continue;
-            }
-            if (rootTransform == physBone.gameObject.transform)
-            {
-                // PhysBone 已经在 root 骨骼上，无需迁移
-                continue;
-            }
-            // rootTransform 指向自身内部（子级），迁移会导致结构错乱，跳过
-            if (rootTransform.IsChildOf(physBone.transform))
-            {
-                Debug.LogWarning($"[PhysBone优化-迁移] {physBone.gameObject.name} 的 rootTransform ({rootTransform.name}) 在其自身内部，跳过迁移");
-                continue;
+                var rootTransform = GetRootTransformField(physBone);
+                if (rootTransform == null)
+                {
+                    Debug.LogWarning($"[PhysBone优化-迁移] {physBone.gameObject.name} 上的 PhysBone rootTransform 为 null，跳过迁移");
+                }
+                else if (rootTransform == physBone.gameObject.transform)
+                {
+                    // PhysBone 已经在 root 骨骼上，无需迁移（但仍需重建其 colliders 引用）
+                }
+                else if (rootTransform.IsChildOf(physBone.transform))
+                {
+                    // rootTransform 指向自身内部（子级），迁移会导致结构错乱，跳过
+                    Debug.LogWarning($"[PhysBone优化-迁移] {physBone.gameObject.name} 的 rootTransform ({rootTransform.name}) 在其自身内部，跳过迁移");
+                }
+                else
+                {
+                    // 使用 AddComponent + CopySerialized 方式替代 CopyComponent/PasteComponentAsNew，
+                    // 确保第三方 DLL 组件（VRCPhysBone、VRCPhysBoneCollider）能正确迁移
+                    var newComponent = rootTransform.gameObject.AddComponent(physBone.GetType());
+                    EditorUtility.CopySerialized(physBone, newComponent);
+                    Undo.DestroyObjectImmediate(physBone);
+                    survivingComponent = newComponent;
+                    fixPhysBones[i] = newComponent;
+                    movedPhysBonesCount++;
+                }
             }
 
-            // 使用 AddComponent + CopySerialized 方式替代 CopyComponent/PasteComponentAsNew，
-            // 确保第三方 DLL 组件（VRCPhysBone、VRCPhysBoneCollider）能正确迁移
-            var newComponent = rootTransform.gameObject.AddComponent(physBone.GetType());
-            EditorUtility.CopySerialized(physBone, newComponent);
-            Undo.DestroyObjectImmediate(physBone);
-
-            // 修复被移动 collider 导致的 Missing 引用
-            RebuildColliderReferences(newComponent, physBoneColliderIds[i], colliderMap);
-
-            movedPhysBonesCount++;
+            // 根据"移动前的 InstanceID 快照 + 旧→新 Collider 映射"重建 colliders 引用。
+            // 迁移过的 PhysBone 修复到新组件上；原位保留的 PhysBone 也必须一并修复——
+            // 它们如果引用了被迁移的 Collider，此刻仍指向已销毁旧组件的 Missing 引用。
+            // 这一步是防止 AAO 删除碰撞球的关键：必须让"迁移后的碰撞球"依然被 PhysBone 引用着。
+            RebuildColliderReferences(survivingComponent, physBoneColliderIds[i], colliderMap);
         }
 
         int totalMoved = movedPhysBonesCount + movedCollidersCount;

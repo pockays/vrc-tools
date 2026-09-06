@@ -44,7 +44,10 @@ public class VRCPhysBoneOptimizerPlugin : Plugin<VRCPhysBoneOptimizerPlugin>
                     // ============================================================
                     string migrateStatus;
                     List<GameObject> migratedObjects;
-                    VRCPhysBoneAPI.MoveAllPhysBonesToRoot(go, out migrateStatus, out migratedObjects);
+                    // referenceScope 传整个 Avatar：迁移会销毁并重建 Collider，
+                    // 必须把全身所有引用这些 Collider 的 PhysBone 都改指向新组件，
+                    // 否则残留 Missing 引用会让 AAO"自动删除未使用对象"把迁移后的碰撞球误删。
+                    VRCPhysBoneAPI.MoveAllPhysBonesToRoot(go, out migrateStatus, out migratedObjects, ctx.AvatarRootObject);
                     Debug.Log($"[PhysBone优化-迁移] {go.name}: {migrateStatus}");
 
                     // ============================================================
